@@ -1,0 +1,60 @@
+.topup-container {
+  padding: 40px;
+  max-width: 400px;
+  margin: 0 auto;
+  background-color: #fff5f0;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.topup-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.topup-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.submit-button {
+  background-color: #f15b29;
+  color: white;
+  padding: 12px;
+  border: none;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.submit-button:hover {
+  background-color: #e04e21;
+}
+
+.previous-topups {
+  margin-top: 30px;
+}
+
+.previous-topups h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.previous-topups ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.previous-topups li {
+  background-color: #fff5f0;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  font-size: 16px;
+}

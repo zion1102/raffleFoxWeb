@@ -1,0 +1,51 @@
+.login-container {
+  text-align: center;
+  padding: 50px;
+}
+
+.login-form {
+  display: inline-block;
+  text-align: left;
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.login-form label {
+  font-weight: bold;
+  margin-top: 20px;
+  display: block;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.submit-button {
+  background-color: #f15b29;
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.submit-button:hover {
+  background-color: #e04e21;
+}
+
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: red;
+  font-size: 14px;
+}

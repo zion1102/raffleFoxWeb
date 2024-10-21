@@ -1,0 +1,32 @@
+.register-container {
+    padding: 40px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .register-form label {
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .register-form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .submit-button {
+    background-color: #f15b29;
+    color: white;
+    padding: 10px;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+  }
+  
+  .submit-button:hover {
+    background-color: #e04e21;
+  }
+  
