@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
-import { auth } from "../firebase"; // Adjust the path as needed
+import { auth } from "../config/firebaseConfig"; // Adjust the path as needed
 
 const EmailPasswordUpdate = () => {
   const [actionCode, setActionCode] = useState(null);
