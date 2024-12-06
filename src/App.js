@@ -5,6 +5,10 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import TopUpCreditsPage from './components/TopUpPage';
 import ProfileScreen from './components/ProfileScreen';
+import EmailPasswordUpdate from "./components/EmailPasswordUpdate";
+
+
+
 
 function App() {
   return (
@@ -15,6 +19,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/topup" element={<TopUpCreditsPage />} />
         <Route path="/profile" element={<ProfileScreen />} />
+        <Route path="/update-account" element={<EmailPasswordUpdate />} />
       </Routes>
     </Router>
   );
