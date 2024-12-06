@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import {applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
+import { applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
+import { auth } from "../firebase"; // Adjust the path as needed
 
 const EmailPasswordUpdate = () => {
   const [actionCode, setActionCode] = useState(null);
   const [mode, setMode] = useState(null);
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -20,49 +21,67 @@ const EmailPasswordUpdate = () => {
   const handleEmailVerification = async () => {
     try {
       if (!actionCode) throw new Error("Invalid action code.");
+      setLoading(true);
       await applyActionCode(auth, actionCode);
       setMessage("Email successfully verified! You can now log in.");
     } catch (error) {
       setMessage(`Error verifying email: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handlePasswordReset = async () => {
+    if (password.length < 6) {
+      setMessage("Password must be at least 6 characters long.");
+      return;
+    }
+
     try {
       if (!actionCode) throw new Error("Invalid action code.");
+      setLoading(true);
       await verifyPasswordResetCode(auth, actionCode); // Verify the code
       await confirmPasswordReset(auth, actionCode, password); // Confirm new password
       setMessage("Password reset successful! You can now log in.");
     } catch (error) {
       setMessage(`Error resetting password: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
       <h1>Update Account</h1>
-      {mode === "verifyEmail" && (
+      {loading ? (
+        <p>Processing...</p>
+      ) : (
         <>
-          <p>Verifying your email...</p>
-          <button onClick={handleEmailVerification}>Verify Email</button>
+          {mode === "verifyEmail" && (
+            <>
+              <p>Verifying your email...</p>
+              <button onClick={handleEmailVerification}>Verify Email</button>
+            </>
+          )}
+          {mode === "resetPassword" && (
+            <>
+              <p>Enter your new password below:</p>
+              <input
+                type="password"
+                placeholder="New Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ padding: "0.5rem", margin: "1rem 0", width: "100%" }}
+              />
+              <button onClick={handlePasswordReset} style={{ padding: "0.5rem 1rem" }}>
+                Reset Password
+              </button>
+            </>
+          )}
+          {!mode && <p>Invalid or unsupported action. Please try again.</p>}
+          {message && <p>{message}</p>}
         </>
       )}
-      {mode === "resetPassword" && (
-        <>
-          <p>Enter your new password below:</p>
-          <input
-            type="password"
-            placeholder="New Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: "0.5rem", margin: "1rem 0", width: "100%" }}
-          />
-          <button onClick={handlePasswordReset} style={{ padding: "0.5rem 1rem" }}>
-            Reset Password
-          </button>
-        </>
-      )}
-      {message && <p>{message}</p>}
     </div>
   );
 };
