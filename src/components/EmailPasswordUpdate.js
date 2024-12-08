@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
+import {
+  applyActionCode,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
+} from "firebase/auth";
 import { auth } from "../config/firebaseConfig"; // Adjust path as needed
 
 const EmailPasswordUpdate = () => {
@@ -13,19 +17,17 @@ const EmailPasswordUpdate = () => {
     const query = new URLSearchParams(window.location.search);
     const mode = query.get("mode");
     const actionCode = query.get("oobCode");
-  
-    console.log("Mode:", mode); // Debugging
-    console.log("Action Code:", actionCode); // Debugging
-  
+
+    console.log("Mode:", mode);
+    console.log("Action Code:", actionCode);
+
     if (!actionCode) {
       setMessage("Invalid or missing action code. Please try again.");
     }
-  
+
     setMode(mode);
     setActionCode(actionCode);
   }, []);
-  
-  
 
   const handleEmailVerification = async () => {
     try {
@@ -84,7 +86,7 @@ const EmailPasswordUpdate = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ padding: "0.5rem", margin: "1rem 0", width: "100%" }}
               />
-              <button onClick={handlePasswordReset} style={{ padding: "0.5rem 1rem" }}>
+              <button onClick={handlePasswordReset}>
                 Reset Password
               </button>
             </>
@@ -98,4 +100,3 @@ const EmailPasswordUpdate = () => {
 };
 
 export default EmailPasswordUpdate;
-
