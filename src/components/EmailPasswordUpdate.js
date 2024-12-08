@@ -4,97 +4,60 @@ import {
   verifyPasswordResetCode,
   confirmPasswordReset,
 } from "firebase/auth";
-import { auth } from "../config/firebaseConfig"; // Adjust path as needed
+import { auth } from "../config/firebaseConfig";
 
 const EmailPasswordUpdate = () => {
   const [actionCode, setActionCode] = useState(null);
   const [mode, setMode] = useState(null);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search);
-    const mode = query.get("mode");
-    const actionCode = query.get("oobCode");
-
-    console.log("Mode:", mode);
-    console.log("Action Code:", actionCode);
-
-    if (!actionCode) {
-      setMessage("Invalid or missing action code. Please try again.");
-    }
-
-    setMode(mode);
-    setActionCode(actionCode);
+    const params = new URLSearchParams(window.location.search);
+    setMode(params.get("mode"));
+    setActionCode(params.get("oobCode"));
   }, []);
 
   const handleEmailVerification = async () => {
     try {
-      if (!actionCode) throw new Error("Invalid or missing action code.");
-      setLoading(true);
+      if (!actionCode) throw new Error("Invalid action code.");
       await applyActionCode(auth, actionCode);
-      setMessage("Email successfully verified! You can now log in.");
+      setMessage("Email verified successfully!");
     } catch (error) {
-      console.error("Error verifying email:", error);
       setMessage(`Error verifying email: ${error.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handlePasswordReset = async () => {
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters long.");
-      return;
-    }
-
     try {
-      if (!actionCode) throw new Error("Invalid or missing action code.");
-      setLoading(true);
-      await verifyPasswordResetCode(auth, actionCode); // Verify the code
-      await confirmPasswordReset(auth, actionCode, password); // Confirm new password
-      setMessage("Password reset successful! You can now log in.");
+      if (!actionCode || password.length < 6) throw new Error("Invalid input.");
+      await verifyPasswordResetCode(auth, actionCode);
+      await confirmPasswordReset(auth, actionCode, password);
+      setMessage("Password reset successfully!");
     } catch (error) {
-      console.error("Error resetting password:", error);
       setMessage(`Error resetting password: ${error.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
+    <div>
       <h1>Update Account</h1>
-      {loading ? (
-        <p>Processing...</p>
+      {mode === "verifyEmail" ? (
+        <button onClick={handleEmailVerification}>Verify Email</button>
+      ) : mode === "resetPassword" ? (
+        <div>
+          <input
+            type="password"
+            placeholder="Enter new password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button onClick={handlePasswordReset}>Reset Password</button>
+        </div>
       ) : (
-        <>
-          {mode === "verifyEmail" && (
-            <>
-              <p>Verifying your email...</p>
-              <button onClick={handleEmailVerification}>Verify Email</button>
-            </>
-          )}
-          {mode === "resetPassword" && (
-            <>
-              <p>Enter your new password below:</p>
-              <input
-                type="password"
-                placeholder="New Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ padding: "0.5rem", margin: "1rem 0", width: "100%" }}
-              />
-              <button onClick={handlePasswordReset}>
-                Reset Password
-              </button>
-            </>
-          )}
-          {!mode && <p>Invalid or unsupported action. Please try again.</p>}
-          {message && <p>{message}</p>}
-        </>
+        <p>Invalid mode.</p>
       )}
+      {message && <p>{message}</p>}
     </div>
   );
 };
