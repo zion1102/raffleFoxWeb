@@ -13,13 +13,19 @@ const EmailPasswordUpdate = () => {
     const query = new URLSearchParams(window.location.search);
     const mode = query.get("mode");
     const actionCode = query.get("oobCode");
-
+  
     console.log("Mode:", mode); // Debugging
     console.log("Action Code:", actionCode); // Debugging
-
+  
+    if (!actionCode) {
+      setMessage("Invalid or missing action code. Please try again.");
+    }
+  
     setMode(mode);
     setActionCode(actionCode);
   }, []);
+  
+  
 
   const handleEmailVerification = async () => {
     try {
