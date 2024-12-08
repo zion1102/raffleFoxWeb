@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { applyActionCode, verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
-import { auth } from "../config/firebaseConfig"; // Adjust the path as needed
+import { auth } from "../config/firebaseConfig"; // Adjust path as needed
 
 const EmailPasswordUpdate = () => {
   const [actionCode, setActionCode] = useState(null);
@@ -13,14 +13,14 @@ const EmailPasswordUpdate = () => {
     const query = new URLSearchParams(window.location.search);
     const mode = query.get("mode");
     const actionCode = query.get("oobCode");
-  
-    console.log("Mode:", mode);
-    console.log("Action Code:", actionCode);
-  
+
+    console.log("Mode:", mode); // Debugging
+    console.log("Action Code:", actionCode); // Debugging
+
     setMode(mode);
     setActionCode(actionCode);
   }, []);
-  
+
   const handleEmailVerification = async () => {
     try {
       if (!actionCode) throw new Error("Invalid or missing action code.");
@@ -34,13 +34,13 @@ const EmailPasswordUpdate = () => {
       setLoading(false);
     }
   };
-  
+
   const handlePasswordReset = async () => {
     if (password.length < 6) {
       setMessage("Password must be at least 6 characters long.");
       return;
     }
-  
+
     try {
       if (!actionCode) throw new Error("Invalid or missing action code.");
       setLoading(true);
@@ -54,7 +54,6 @@ const EmailPasswordUpdate = () => {
       setLoading(false);
     }
   };
-  
 
   return (
     <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
@@ -93,3 +92,4 @@ const EmailPasswordUpdate = () => {
 };
 
 export default EmailPasswordUpdate;
+
