@@ -13,42 +13,48 @@ const EmailPasswordUpdate = () => {
     const query = new URLSearchParams(window.location.search);
     const mode = query.get("mode");
     const actionCode = query.get("oobCode");
-
+  
+    console.log("Mode:", mode);
+    console.log("Action Code:", actionCode);
+  
     setMode(mode);
     setActionCode(actionCode);
   }, []);
-
+  
   const handleEmailVerification = async () => {
     try {
-      if (!actionCode) throw new Error("Invalid action code.");
+      if (!actionCode) throw new Error("Invalid or missing action code.");
       setLoading(true);
       await applyActionCode(auth, actionCode);
       setMessage("Email successfully verified! You can now log in.");
     } catch (error) {
+      console.error("Error verifying email:", error);
       setMessage(`Error verifying email: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
-
+  
   const handlePasswordReset = async () => {
     if (password.length < 6) {
       setMessage("Password must be at least 6 characters long.");
       return;
     }
-
+  
     try {
-      if (!actionCode) throw new Error("Invalid action code.");
+      if (!actionCode) throw new Error("Invalid or missing action code.");
       setLoading(true);
       await verifyPasswordResetCode(auth, actionCode); // Verify the code
       await confirmPasswordReset(auth, actionCode, password); // Confirm new password
       setMessage("Password reset successful! You can now log in.");
     } catch (error) {
+      console.error("Error resetting password:", error);
       setMessage(`Error resetting password: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
