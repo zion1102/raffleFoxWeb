@@ -20,10 +20,17 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   }
 
   try {
+    const clientSecret =
+      'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Iks3UURGMzNVQTUifQ.' +
+      'eyJpc3MiOiJZNU4zVTdDVTROIiwiaWF0IjoxNzM0MTE1NDQxLCJleHAiOjE3MzQyMDE4NDEsIm' +
+      'F1ZCI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJzdWIiOiJjb20uZXhhbXBsZS5yYWZm' +
+      'bGUtZm94LnNlcnZpY2UifQ.dLO_Bb5XhyykuBuhtWvB02XQmtrCCRla94K0_S-L3psFvWFQ5Zk' +
+      'IvKaNjPQ8emZ8suguCAuJWfVGDmOB2jCP-Q';
+
     const response = await axios.post('https://appleid.apple.com/auth/token', null, {
       params: {
-        client_id: 'com.example.raffle-Fox', // Replace with your Service ID
-        client_secret: 'YOUR_GENERATED_APPLE_SECRET', // Replace with your generated client secret
+        client_id: 'com.example.raffle-Fox.service', 
+        client_secret: clientSecret, 
         code: code,
         grant_type: 'authorization_code',
       },
@@ -32,7 +39,7 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
       },
     });
 
-    res.json(response.data); // Send the response back to the frontend
+    res.json(response.data);
   } catch (error) {
     console.error(
       'Error during token exchange:',
