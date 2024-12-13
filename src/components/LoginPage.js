@@ -1,45 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { EmailAuthProvider, linkWithCredential } from 'firebase/auth';
-import { auth } from '../config/firebaseConfig'; // Import Firebase auth
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
-import axios from 'axios'; // Axios for backend Apple token verification
+import { EmailAuthProvider, linkWithCredential, OAuthProvider } from 'firebase/auth';
+import { auth } from '../config/firebaseConfig'; // Firebase auth configuration
+import { useNavigate } from 'react-router-dom'; // For navigation
+import axios from 'axios'; // For API calls
 import '../styles/LoginPage.css';
 import TopNavBar from './TopNavBar';
-import { OAuthProvider } from "firebase/auth";
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(''); // For handling error messages
-  const [loading, setLoading] = useState(false); // For handling loading state
-  const [successMessage, setSuccessMessage] = useState(''); // For success messages
-
-  const navigate = useNavigate(); // Hook for navigation
+  const [error, setError] = useState(''); // Error handling
+  const [loading, setLoading] = useState(false); // Loading state
+  const [successMessage, setSuccessMessage] = useState(''); // Success messages
+  const navigate = useNavigate(); // For navigation
 
   // Initialize AppleID.auth
   useEffect(() => {
     if (window.AppleID) {
       window.AppleID.auth.init({
-        clientId: 'com.example.raffle-Fox.service', // Replace with your app's client ID
+        clientId: 'com.example.raffle-Fox.service', // Your Service ID
         scope: 'email name',
-        redirectURI: 'https://rafflefox.netlify.app/auth/callback', // Replace with your redirect URI
-        usePopup: true, // Use popup for Apple Sign-In
+        redirectURI: 'https://rafflefox.netlify.app/auth/callback', // Your redirect URI
+        usePopup: true,
       });
     }
   }, []);
 
+  // Handle Email/Password Login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccessMessage('');
-  
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Logged in successfully with Email/Password:', userCredential.user);
-  
-      // Redirect to top-up page
+
+      // Redirect to the top-up page after login
       navigate('/topup');
     } catch (error) {
       if (error.code === 'auth/wrong-password') {
@@ -54,8 +53,8 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-  
 
+  // Link Email and Password to an existing account
   const linkEmailPassword = async () => {
     try {
       const emailCredential = EmailAuthProvider.credential(email, password);
@@ -72,6 +71,7 @@ const LoginPage = () => {
     }
   };
 
+  // Handle Password Reset
   const handlePasswordReset = async () => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -83,18 +83,19 @@ const LoginPage = () => {
     }
   };
 
+  // Handle Apple Sign-In
   const handleAppleSignIn = async () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
-  
+
     try {
       // Step 1: Initiate Apple Sign-In
       const response = await window.AppleID.auth.signIn();
       console.log('Apple Sign-In response:', response);
-  
+
       const { code } = response.authorization;
-  
+
       // Step 2: Call Firebase Cloud Function to exchange authorization code for an ID token
       const tokenResponse = await axios.post(
         "https://us-central1-rafflefox-23872.cloudfunctions.net/exchangeAppleToken",
@@ -105,23 +106,22 @@ const LoginPage = () => {
           },
         }
       );
-  
-      const { id_token } = tokenResponse.data; // Extract the ID token from the response
-  
+
+      const { id_token } = tokenResponse.data; // Extract the ID token
       console.log('Verified Apple ID Token:', id_token);
-  
+
       // Step 3: Authenticate with Firebase using the Apple ID token
       const provider = new OAuthProvider("apple.com");
       const credential = provider.credential({
         idToken: id_token,
       });
-  
+
       const userCredential = await auth.signInWithCredential(credential);
-  
+
       // Step 4: Handle successful sign-in
       console.log("Successfully signed in with Firebase:", userCredential.user);
       setSuccessMessage(`Welcome, ${userCredential.user.displayName || "User"}!`);
-      navigate('/topup'); // Redirect to the top-up page or any other page
+      navigate('/topup'); // Redirect to the top-up page
     } catch (error) {
       console.error("Error during Apple Sign-In:", error);
       setError('Failed to sign in with Apple. Please try again.');
@@ -129,15 +129,14 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-  
 
   return (
     <div>
       <TopNavBar />
       <div className="login-container">
         <h2>Log In</h2>
-        {error && <p className="error-message">{error}</p>} {/* Display error message if any */}
-        {successMessage && <p className="success-message">{successMessage}</p>} {/* Display success message if any */}
+        {error && <p className="error-message">{error}</p>}
+        {successMessage && <p className="success-message">{successMessage}</p>}
         <form onSubmit={handleSubmit} className="login-form">
           <label>Email</label>
           <input
@@ -188,19 +187,6 @@ const LoginPage = () => {
       </div>
     </div>
   );
-};
-
-// Function to verify Apple auth code
-const verifyAppleAuthCode = async (authCode) => {
-  const response = await axios.post('https://appleid.apple.com/auth/token', {
-    client_id: 'com.example.raffle-Fox', // Replace with your app's client ID
-    client_secret: ' eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Iks3UURGMzNVQTUifQ.eyJpc3MiOiJZNU4zVTdDVTROIiwiaWF0IjoxNzM0MTE1NDQxLCJleHAiOjE3MzQyMDE4NDEsImF1ZCI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJzdWIiOiJjb20uZXhhbXBsZS5yYWZmbGUtZm94LnNlcnZpY2UifQ.dLO_Bb5XhyykuBuhtWvB02XQmtrCCRla94K0_S-L3psFvWFQ5ZkIvKaNjPQ8emZ8suguCAuJWfVGDmOB2jCP-Q', // Replace with your app's generated Apple secret
-    code: authCode,
-    grant_type: 'authorization_code',
-  });
-
-  const { id_token, access_token } = response.data;
-  return { id_token, access_token };
 };
 
 export default LoginPage;
