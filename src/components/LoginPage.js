@@ -20,7 +20,7 @@ const LoginPage = () => {
   useEffect(() => {
     if (window.AppleID) {
       window.AppleID.auth.init({
-        clientId: 'com.example.raffle-Fox', // Replace with your app's client ID
+        clientId: 'com.example.raffle-Fox.service', // Replace with your app's client ID
         scope: 'email name',
         redirectURI: 'https://rafflefox.netlify.app/auth/callback', // Replace with your redirect URI
         usePopup: true, // Use popup for Apple Sign-In
