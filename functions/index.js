@@ -5,7 +5,7 @@ const fs = require('fs');
 
 // Replace with your actual values
 const TEAM_ID = 'Y5N3U7CU4N'; // Your Apple Developer Team ID
-const KEY_ID = '3VG9HSG4ZZ'; // Replace with your Key ID from Apple Developer Portal
+const KEY_ID = '3VG9HSG4ZZ'; // Your Key ID from Apple Developer Portal
 const CLIENT_ID = 'com.example.raffle-Fox.service'; // Your Service ID
 
 // Path to your private key file downloaded from Apple Developer
@@ -16,20 +16,25 @@ const PRIVATE_KEY_PATH = '/Users/zionhenry/dev_folder/raffleFoxWeb/AuthKey_3VG9H
  * @return {string} The signed client secret.
  */
 function generateClientSecret() {
-  const privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
+  try {
+    const privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
 
-  const payload = {
-    iss: TEAM_ID,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000, // 6 months validity
-    aud: 'https://appleid.apple.com',
-    sub: CLIENT_ID,
-  };
+    const payload = {
+      iss: TEAM_ID,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 15777000, // 6 months validity
+      aud: 'https://appleid.apple.com',
+      sub: CLIENT_ID,
+    };
 
-  return jwt.sign(payload, privateKey, {
-    algorithm: 'ES256',
-    keyid: KEY_ID,
-  });
+    return jwt.sign(payload, privateKey, {
+      algorithm: 'ES256',
+      keyid: KEY_ID,
+    });
+  } catch (error) {
+    console.error('Error generating client secret:', error);
+    throw new Error('Failed to generate client secret.');
+  }
 }
 
 exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
@@ -45,12 +50,14 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   const { code } = req.body;
 
   if (!code) {
+    console.error('Missing authorization code in request body.');
     res.status(400).json({ error: 'Authorization code is required' });
     return;
   }
 
   try {
     const clientSecret = generateClientSecret();
+    console.log('Generated client secret:', clientSecret);
 
     const response = await axios.post(
       'https://appleid.apple.com/auth/token',
@@ -61,19 +68,20 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
           client_secret: clientSecret,
           code,
           grant_type: 'authorization_code',
-        }, // <- Fixed trailing comma
+        },
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-        }, // <- Fixed trailing comma
+        },
       },
     );
 
+    console.log('Response from Apple:', response.data);
     res.json(response.data);
   } catch (error) {
-    console.error(
-      'Error during token exchange:',
-      error.response ? error.response.data : error.message,
-    );
+    console.error('Error during token exchange:', {
+      message: error.message,
+      response: error.response ? error.response.data : 'No response data',
+    });
     res.status(500).json({ error: 'Token exchange failed' });
   }
 });
