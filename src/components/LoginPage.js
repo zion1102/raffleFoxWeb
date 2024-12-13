@@ -19,11 +19,12 @@ const LoginPage = () => {
   useEffect(() => {
     if (window.AppleID) {
       window.AppleID.auth.init({
-        clientId: 'com.example.raffle-Fox.service', // Your Service ID
-        scope: 'email name',
-        redirectURI: 'https://rafflefox.netlify.app/auth/callback', // Your redirect URI
+        clientId: "com.example.raffle-Fox.service", // Your Service ID
+        scope: "email name",
+        redirectURI: "https://rafflefox.netlify.app/auth/callback", // Your callback URL
         usePopup: true,
       });
+      
     }
   }, []);
 

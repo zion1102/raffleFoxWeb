@@ -1,8 +1,38 @@
 const functions = require('firebase-functions');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+// Replace with your actual values
+const TEAM_ID = 'Y5N3U7CU4N'; // Your Apple Developer Team ID
+const KEY_ID = '3VG9HSG4ZZ'; // Replace with your Key ID from Apple Developer Portal
+const CLIENT_ID = 'com.example.raffle-Fox.service'; // Your Service ID
+
+// Path to your private key file downloaded from Apple Developer
+const PRIVATE_KEY_PATH = '/Users/zionhenry/dev_folder/raffleFoxWeb/AuthKey_3VG9HSG4ZZ.p8';
+
+/**
+ * Generates a client secret for Apple Sign-In using JWT.
+ * @return {string} The signed client secret.
+ */
+function generateClientSecret() {
+  const privateKey = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
+
+  const payload = {
+    iss: TEAM_ID,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 15777000, // 6 months validity
+    aud: 'https://appleid.apple.com',
+    sub: CLIENT_ID,
+  };
+
+  return jwt.sign(payload, privateKey, {
+    algorithm: 'ES256',
+    keyid: KEY_ID,
+  });
+}
 
 exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
-  // Allow CORS requests from your frontend
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   res.set('Access-Control-Allow-Methods', 'POST');
@@ -20,24 +50,23 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    const clientSecret =
-      'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Iks3UURGMzNVQTUifQ.' +
-      'eyJpc3MiOiJZNU4zVTdDVTROIiwiaWF0IjoxNzM0MTE1NDQxLCJleHAiOjE3MzQyMDE4NDEsIm' +
-      'F1ZCI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJzdWIiOiJjb20uZXhhbXBsZS5yYWZm' +
-      'bGUtZm94LnNlcnZpY2UifQ.dLO_Bb5XhyykuBuhtWvB02XQmtrCCRla94K0_S-L3psFvWFQ5Zk' +
-      'IvKaNjPQ8emZ8suguCAuJWfVGDmOB2jCP-Q';
+    const clientSecret = generateClientSecret();
 
-    const response = await axios.post('https://appleid.apple.com/auth/token', null, {
-      params: {
-        client_id: 'com.example.raffle-Fox.service', 
-        client_secret: clientSecret, 
-        code: code,
-        grant_type: 'authorization_code',
+    const response = await axios.post(
+      'https://appleid.apple.com/auth/token',
+      null,
+      {
+        params: {
+          client_id: CLIENT_ID,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+        }, // <- Fixed trailing comma
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }, // <- Fixed trailing comma
       },
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+    );
 
     res.json(response.data);
   } catch (error) {
