@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'; // Import useNavigate for naviga
 import axios from 'axios'; // Axios for backend Apple token verification
 import '../styles/LoginPage.css';
 import TopNavBar from './TopNavBar';
+import { OAuthProvider } from "firebase/auth";
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -88,23 +89,41 @@ const LoginPage = () => {
     setSuccessMessage('');
   
     try {
+      // Step 1: Initiate Apple Sign-In
       const response = await window.AppleID.auth.signIn();
       console.log('Apple Sign-In response:', response);
   
       const { code } = response.authorization;
   
-      // Call your backend to verify the Apple auth code
-      const { id_token } = await verifyAppleAuthCode(code);
+      // Step 2: Call Firebase Cloud Function to exchange authorization code for an ID token
+      const tokenResponse = await axios.post(
+        "https://us-central1-rafflefox-23872.cloudfunctions.net/exchangeAppleToken",
+        { code }, // Send the authorization code
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
   
-      // Use id_token to authenticate with your backend or Firebase
+      const { id_token } = tokenResponse.data; // Extract the ID token from the response
+  
       console.log('Verified Apple ID Token:', id_token);
   
-      setSuccessMessage('Signed in with Apple successfully!');
-      
-      // Redirect to top-up page after successful login
-      navigate('/topup');
+      // Step 3: Authenticate with Firebase using the Apple ID token
+      const provider = new OAuthProvider("apple.com");
+      const credential = provider.credential({
+        idToken: id_token,
+      });
+  
+      const userCredential = await auth.signInWithCredential(credential);
+  
+      // Step 4: Handle successful sign-in
+      console.log("Successfully signed in with Firebase:", userCredential.user);
+      setSuccessMessage(`Welcome, ${userCredential.user.displayName || "User"}!`);
+      navigate('/topup'); // Redirect to the top-up page or any other page
     } catch (error) {
-      console.error('Apple Sign-In error:', error);
+      console.error("Error during Apple Sign-In:", error);
       setError('Failed to sign in with Apple. Please try again.');
     } finally {
       setLoading(false);
