@@ -33,18 +33,18 @@ const LoginPage = () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
-
+  
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Logged in successfully with Email/Password:', userCredential.user);
+  
+      // Redirect to top-up page
       navigate('/topup');
     } catch (error) {
       if (error.code === 'auth/wrong-password') {
         setError('Incorrect password. If you signed in with Apple, please use that option.');
       } else if (error.code === 'auth/user-not-found') {
         setError('No account found with this email. Please check or sign up.');
-      } else if (error.code === 'auth/email-already-in-use') {
-        setError('This email is linked to another sign-in method. Try "Sign in with Apple".');
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
@@ -53,6 +53,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+  
 
   const linkEmailPassword = async () => {
     try {
@@ -85,20 +86,23 @@ const LoginPage = () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
-
+  
     try {
       const response = await window.AppleID.auth.signIn();
       console.log('Apple Sign-In response:', response);
-
+  
       const { code } = response.authorization;
-
+  
       // Call your backend to verify the Apple auth code
       const { id_token } = await verifyAppleAuthCode(code);
-
+  
       // Use id_token to authenticate with your backend or Firebase
       console.log('Verified Apple ID Token:', id_token);
-
+  
       setSuccessMessage('Signed in with Apple successfully!');
+      
+      // Redirect to top-up page after successful login
+      navigate('/topup');
     } catch (error) {
       console.error('Apple Sign-In error:', error);
       setError('Failed to sign in with Apple. Please try again.');
@@ -106,6 +110,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div>
