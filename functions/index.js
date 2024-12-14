@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 // Replace with your actual values
 const TEAM_ID = 'Y5N3U7CU4N'; // Your Apple Developer Team ID
-const KEY_ID = 'K7QDF33UA5'; // Your Key ID from Apple Developer Portal
+const KEY_ID = '3VG9HSG4ZZ'; // Your Key ID from Apple Developer Portal
 const CLIENT_ID = 'com.example.raffle-Fox.service'; // Your Service ID
 
 // Private key from Apple Developer
@@ -66,20 +66,23 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
     const clientSecret = generateClientSecret();
     console.log('Generated client secret:', clientSecret);
 
-    const payload = {
+    console.log('Sending token exchange request to Apple with the following params:', {
       client_id: CLIENT_ID,
       client_secret: clientSecret,
       code,
       grant_type: 'authorization_code',
-    };
-
-    console.log('Payload sent to Apple:', payload);
+    });
 
     const response = await axios.post(
       'https://appleid.apple.com/auth/token',
       null,
       {
-        params: payload,
+        params: {
+          client_id: CLIENT_ID,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+        },
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -93,6 +96,12 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
       message: error.message,
       response: error.response ? error.response.data : 'No response data',
     });
-    res.status(500).json({ error: 'Token exchange failed' });
+    if (error.response) {
+      console.error('Detailed error from Apple:', error.response.data);
+    }
+    res.status(500).json({
+      error: 'Token exchange failed',
+      details: error.response ? error.response.data : 'No additional details available',
+    });
   }
 });
