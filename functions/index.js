@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 // Replace with your actual values
 const TEAM_ID = 'Y5N3U7CU4N'; // Your Apple Developer Team ID
-const KEY_ID = '3VG9HSG4ZZ'; // Your Key ID from Apple Developer Portal
+const KEY_ID = 'K7QDF33UA5'; // Your Key ID from Apple Developer Portal
 const CLIENT_ID = 'com.example.raffle-Fox.service'; // Your Service ID
 
 // Private key from Apple Developer
@@ -29,10 +29,15 @@ function generateClientSecret() {
       sub: CLIENT_ID,
     };
 
-    return jwt.sign(payload, privateKey, {
+    console.log('JWT Payload:', payload);
+
+    const clientSecret = jwt.sign(payload, privateKey, {
       algorithm: 'ES256',
       keyid: KEY_ID,
     });
+
+    console.log('Generated Client Secret:', clientSecret);
+    return clientSecret;
   } catch (error) {
     console.error('Error generating client secret:', error);
     throw new Error('Failed to generate client secret.');
@@ -61,16 +66,20 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
     const clientSecret = generateClientSecret();
     console.log('Generated client secret:', clientSecret);
 
+    const payload = {
+      client_id: CLIENT_ID,
+      client_secret: clientSecret,
+      code,
+      grant_type: 'authorization_code',
+    };
+
+    console.log('Payload sent to Apple:', payload);
+
     const response = await axios.post(
       'https://appleid.apple.com/auth/token',
       null,
       {
-        params: {
-          client_id: CLIENT_ID,
-          client_secret: clientSecret,
-          code,
-          grant_type: 'authorization_code',
-        },
+        params: payload,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
