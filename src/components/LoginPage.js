@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { EmailAuthProvider, linkWithCredential, OAuthProvider } from 'firebase/auth';
+import {signInWithCredential, EmailAuthProvider, linkWithCredential, OAuthProvider } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig'; // Firebase auth configuration
 import { useNavigate } from 'react-router-dom'; // For navigation
 import axios from 'axios'; // For API calls
@@ -29,27 +29,19 @@ const LoginPage = () => {
     }
   }, []);
 
-  // Handle Apple Sign-In
   const handleAppleSignIn = async () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
-
+  
     try {
       console.log('Starting Apple Sign-In process...');
       const response = await window.AppleID.auth.signIn();
       console.log('Apple Sign-In response:', response);
-
+  
       const { code } = response.authorization;
-
-      if (!code) {
-        setError('Authorization code not received.');
-        console.error('No authorization code returned by Apple.');
-        return;
-      }
-
       console.log('Authorization code received:', code);
-
+  
       // Exchange the authorization code for an ID token with your backend
       const tokenResponse = await axios.post(
         'https://us-central1-rafflefox-23872.cloudfunctions.net/exchangeAppleToken',
@@ -60,25 +52,26 @@ const LoginPage = () => {
           },
         }
       );
-
+  
       console.log('Backend token exchange response:', tokenResponse.data);
-
+  
       const { id_token } = tokenResponse.data;
-
+      console.log('ID token received:', id_token);
+  
       if (!id_token) {
         setError('No ID token returned from backend.');
-        console.error('No ID token received from backend response:', tokenResponse.data);
         return;
       }
-
-      console.log('ID token received:', id_token);
-
-      // Authenticate with Firebase using the Apple ID token
+  
+      // Use the ID token to sign in with Firebase
       const provider = new OAuthProvider('apple.com');
-      const credential = provider.credential({ idToken: id_token });
-
-      const userCredential = await auth.signInWithCredential(credential);
-
+      const credential = provider.credential({
+        idToken: id_token,
+      });
+  
+      // Correct way to call signInWithCredential
+      const userCredential = await signInWithCredential(auth, credential);
+  
       console.log('Successfully signed in with Firebase:', userCredential.user);
       setSuccessMessage(`Welcome, ${userCredential.user.displayName || 'User'}!`);
       navigate('/topup');
@@ -89,6 +82,7 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+  
 
   // Handle Email/Password Login
   const handleEmailSignIn = async (e) => {
