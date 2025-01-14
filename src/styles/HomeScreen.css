@@ -1,0 +1,118 @@
+/* General Container Styling */
+.home-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  background-color: #fff5f0;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Heading Styles */
+h1 {
+  font-size: 32px;
+  color: #f15b29;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+p {
+  font-size: 16px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* Raffle Section Styling */
+.raffle-section {
+  margin-bottom: 40px;
+}
+
+.raffle-section h2 {
+  font-size: 24px;
+  color: #f15b29;
+  margin-bottom: 15px;
+}
+
+/* Raffle List Grid */
+.raffle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* Raffle Card Styling */
+.raffle-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: calc(25% - 20px);
+  background-color: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.raffle-card:hover {
+  background-color: #f15b29;
+  color: white;
+  transform: translateY(-5px);
+  cursor: pointer;
+}
+
+.raffle-card:hover img {
+  transform: scale(1.05);
+}
+
+/* Raffle Image */
+.raffle-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+/* Raffle Title */
+.raffle-card h3 {
+  font-size: 18px;
+  color: #f15b29;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.raffle-card:hover h3 {
+  color: white;
+}
+
+/* Raffle Description and Price */
+.raffle-card p {
+  font-size: 14px;
+  color: #333;
+  margin-top: 5px;
+}
+
+.raffle-card:hover p {
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .raffle-list {
+    flex-direction: column;
+  }
+
+  .raffle-card {
+    width: 100%;
+  }
+}
+.no-raffles {
+  font-size: 16px;
+  color: #555;
+  text-align: center;
+  margin-top: 10px;
+}

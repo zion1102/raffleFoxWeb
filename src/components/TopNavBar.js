@@ -32,12 +32,15 @@ const TopNavBar = () => {
   return (
     <nav className="navbar">
       <div className="navbar-logo">
-        <Link to={isLoggedIn ? "/topup" : "/"}> Raffle Fox</Link> {/* Direct to TopUp if logged in */}
+        {/* Conditionally navigate to /home if logged in, otherwise to / */}
+        <Link to={isLoggedIn ? "/home" : "/"}>RaffleFox</Link>
       </div>
+      
       <div className="navbar-links">
         {isLoggedIn ? (
           <>
-           
+            <Link to="/home">Home</Link>
+            <Link to="/topup">Top Up</Link>
             <Link to="/profile">Profile</Link>
             <button onClick={handleLogout} className="logout-button">Log Out</button>
           </>

@@ -7,6 +7,7 @@ import TopUpCreditsPage from './components/TopUpPage';
 import ProfileScreen from './components/ProfileScreen';
 import EmailPasswordUpdate from "./components/EmailPasswordUpdate";
 import AuthCallback from './components/AuthCallback';
+import HomeScreen from './components/HomeScreen';
 
 
 
@@ -23,6 +24,8 @@ function App() {
         <Route path="/profile" element={<ProfileScreen />} />
         <Route path="/update-account" element={<EmailPasswordUpdate />} />
         <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this */}
+
+        <Route path="/home" element={<HomeScreen />} />
       </Routes>
     </Router>
   );
