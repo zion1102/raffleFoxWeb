@@ -1,25 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../config/firebaseConfig'; // Import Firebase Firestore and Auth
-import { doc, updateDoc, collection, addDoc, query, where, orderBy, getDocs, increment } from 'firebase/firestore'; // Import Firestore functions, including increment
+import { db, auth } from '../config/firebaseConfig';
+import { doc, updateDoc, collection, addDoc, query, where, orderBy, getDocs, increment } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Import Firebase Auth for auto-login
+import queryString from 'query-string'; // Import query-string for URL parsing
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
 
 const TopUpPage = () => {
   const [amount, setAmount] = useState(0);
-  const [topups, setTopups] = useState([]); // State to hold previous top-ups
+  const [topups, setTopups] = useState([]);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);  // New state for loading
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        await fetchTopUps(currentUser.uid);
-      }
-      setLoading(false);  // Set loading to false after data fetch
-    });
+    const checkAuth = async () => {
+      // Parse the URL parameters
+      const params = queryString.parse(window.location.search);
+      const userId = params.userId;
+      const email = params.email;
 
-    return () => unsubscribe();  // Cleanup listener on component unmount
+      if (userId && email) {
+        try {
+          // Attempt to sign in the user automatically
+          const userCredential = await signInWithEmailAndPassword(auth, email, 'defaultpassword'); // Ensure users have this password set
+          setUser(userCredential.user);
+          await fetchTopUps(userCredential.user.uid);
+        } catch (error) {
+          console.error("Auto-login failed:", error);
+        }
+      } else {
+        auth.onAuthStateChanged(async (currentUser) => {
+          if (currentUser) {
+            setUser(currentUser);
+            await fetchTopUps(currentUser.uid);
+          }
+        });
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   const fetchTopUps = async (userId) => {
@@ -30,16 +51,11 @@ const TopUpPage = () => {
         orderBy('createdAt', 'desc')
       );
       const topupsSnapshot = await getDocs(q);
-
       if (!topupsSnapshot.empty) {
-        const topupData = topupsSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-        console.log('Fetched top-ups:', topupData); // Log the top-ups
-        setTopups(topupData);  // Update state
-      } else {
-        console.log('No top-ups found.');
+        setTopups(topupsSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
       }
     } catch (error) {
-      console.error('Error fetching top-ups:', error); // Log the error if any
+      console.error('Error fetching top-ups:', error);
     }
   };
 
@@ -47,22 +63,19 @@ const TopUpPage = () => {
     e.preventDefault();
     if (amount > 0 && user) {
       try {
-        // Add top-up to Firestore
         await addDoc(collection(db, 'topups'), {
           userId: user.uid,
           amount: Number(amount),
           createdAt: new Date(),
         });
 
-        // Update user's credits in the 'users' collection
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, {
-          credits: increment(Number(amount)), // Use the increment function here
+          credits: increment(Number(amount)),
         });
 
-        // Refetch top-ups after a successful top-up
         await fetchTopUps(user.uid);
-        setAmount(0); // Reset amount after top-up
+        setAmount(0);
         alert('Top-up successful!');
       } catch (error) {
         console.error('Error processing top-up:', error);
@@ -72,13 +85,8 @@ const TopUpPage = () => {
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;  // Show loading message while data is being fetched
-  }
-  
-  if (!user) {
-    return <div>Please log in to view your top-ups.</div>; // Display message if user is not logged in
-  }
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>Please log in to view your top-ups.</div>;
 
   return (
     <div>
@@ -96,7 +104,7 @@ const TopUpPage = () => {
           />
           <button type="submit" className="submit-button">Top Up</button>
         </form>
-  
+
         <div className="previous-topups">
           <h3>Previous Top-Ups</h3>
           {topups.length > 0 ? (
