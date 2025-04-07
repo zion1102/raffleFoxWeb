@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../config/firebaseConfig';
 import { doc, updateDoc, collection, addDoc, query, where, orderBy, getDocs, increment } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth'; // Import Firebase Auth for auto-login
-import queryString from 'query-string'; // Import query-string for URL parsing
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
+import LoginPage from './LoginPage'; // 👈 Import login page
 
 const TopUpPage = () => {
   const [amount, setAmount] = useState(0);
@@ -12,35 +11,19 @@ const TopUpPage = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Listen for auth state
   useEffect(() => {
-    const checkAuth = async () => {
-      // Parse the URL parameters
-      const params = queryString.parse(window.location.search);
-      const userId = params.userId;
-      const email = params.email;
-
-      if (userId && email) {
-        try {
-          // Attempt to sign in the user automatically
-          const userCredential = await signInWithEmailAndPassword(auth, email, 'defaultpassword'); // Ensure users have this password set
-          setUser(userCredential.user);
-          await fetchTopUps(userCredential.user.uid);
-        } catch (error) {
-          console.error("Auto-login failed:", error);
-        }
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        await fetchTopUps(currentUser.uid);
       } else {
-        auth.onAuthStateChanged(async (currentUser) => {
-          if (currentUser) {
-            setUser(currentUser);
-            await fetchTopUps(currentUser.uid);
-          }
-        });
+        setUser(null);
       }
-
       setLoading(false);
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
   const fetchTopUps = async (userId) => {
@@ -86,7 +69,11 @@ const TopUpPage = () => {
   };
 
   if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Please log in to view your top-ups.</div>;
+
+  // 👇 If not logged in, show LoginPage
+  if (!user) {
+    return <LoginPage redirectAfterLogin="/topup" />;
+  }
 
   return (
     <div>
