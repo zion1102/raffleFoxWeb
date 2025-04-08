@@ -1,15 +1,13 @@
 const functions = require('firebase-functions');
-const admin = require('firebase-admin');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
-admin.initializeApp();
+// Replace with your actual values
+const TEAM_ID = 'Y5N3U7CU4N'; // Your Apple Developer Team ID
+const KEY_ID = '3VG9HSG4ZZ'; // Your Key ID from Apple Developer Portal
+const CLIENT_ID = 'com.example.raffle-Fox.service'; // Your Service ID
 
-// Apple Sign-In Config
-const TEAM_ID = 'Y5N3U7CU4N'; // Apple Developer Team ID
-const KEY_ID = '3VG9HSG4ZZ'; // Apple Key ID
-const CLIENT_ID = 'com.example.raffle-Fox.service'; // Apple Service ID (Client ID)
-
+// Private key from Apple Developer
 const privateKey = `-----BEGIN PRIVATE KEY-----
 MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgHdU4A3xoFSP/ajcx
 6pjM3j3cR8fSRVy2bh1uxXQyZXmgCgYIKoZIzj0DAQehRANCAAQu9eSZIX+nFyjg
@@ -17,23 +15,35 @@ t6MaKwNMCWnsgSmiwm3SOKbtxWGpxX8cPGpMp1u6AF0REic88WtDZb3aaCpxR7QJ
 zQvX5W1k
 -----END PRIVATE KEY-----`;
 
-// Generate JWT for Apple token exchange
+/**
+ * Generates a client secret for Apple Sign-In using JWT.
+ * @return {string} The signed client secret.
+ */
 function generateClientSecret() {
-  const payload = {
-    iss: TEAM_ID,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000, // ~6 months
-    aud: 'https://appleid.apple.com',
-    sub: CLIENT_ID,
-  };
+  try {
+    const payload = {
+      iss: TEAM_ID,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 15777000, // 6 months validity
+      aud: 'https://appleid.apple.com',
+      sub: CLIENT_ID,
+    };
 
-  return jwt.sign(payload, privateKey, {
-    algorithm: 'ES256',
-    keyid: KEY_ID,
-  });
+    console.log('JWT Payload:', payload);
+
+    const clientSecret = jwt.sign(payload, privateKey, {
+      algorithm: 'ES256',
+      keyid: KEY_ID,
+    });
+
+    console.log('Generated Client Secret:', clientSecret);
+    return clientSecret;
+  } catch (error) {
+    console.error('Error generating client secret:', error);
+    throw new Error('Failed to generate client secret.');
+  }
 }
 
-// Exchange Apple auth code for tokens
 exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -47,58 +57,51 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   const { code } = req.body;
 
   if (!code) {
+    console.error('Missing authorization code in request body.');
     res.status(400).json({ error: 'Authorization code is required' });
     return;
   }
 
   try {
     const clientSecret = generateClientSecret();
+    console.log('Generated client secret:', clientSecret);
+
+    console.log('Sending token exchange request to Apple with the following params:', {
+      client_id: CLIENT_ID,
+      client_secret: clientSecret,
+      code,
+      grant_type: 'authorization_code',
+    });
 
     const response = await axios.post(
       'https://appleid.apple.com/auth/token',
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: clientSecret,
-        code,
-        grant_type: 'authorization_code',
-      }),
+      null,
       {
+        params: {
+          client_id: CLIENT_ID,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+        },
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-      }
+      },
     );
 
-    const { id_token } = response.data;
-
-    if (!id_token) {
-      res.status(500).json({ error: 'No ID token returned from Apple' });
-      return;
-    }
-
-    res.json({ id_token });
+    console.log('Response from Apple:', response.data);
+    res.json(response.data);
   } catch (error) {
-    console.error('Error exchanging Apple token:', error.response?.data || error.message);
+    console.error('Error during token exchange:', {
+      message: error.message,
+      response: error.response ? error.response.data : 'No response data',
+    });
+    if (error.response) {
+      console.error('Detailed error from Apple:', error.response.data);
+    }
     res.status(500).json({
       error: 'Token exchange failed',
-      details: error.response?.data || error.message,
+      details: error.response ? error.response.data : 'No additional details available',
     });
-  }
-});
-
-// Firebase Custom Token Generation
-exports.getCustomToken = functions.https.onCall(async (data, context) => {
-  const { uid } = data;
-
-  if (!uid) {
-    throw new functions.https.HttpsError('invalid-argument', 'User ID (uid) is required');
-  }
-
-  try {
-    const customToken = await admin.auth().createCustomToken(uid);
-    return { token: customToken };
-  } catch (err) {
-    console.error('Error creating custom token:', err);
-    throw new functions.https.HttpsError('internal', 'Custom token generation failed');
   }
 });
