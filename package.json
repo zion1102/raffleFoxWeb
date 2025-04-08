@@ -6,8 +6,10 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.7.9",
+    "axios": "^1.8.4",
     "firebase": "^11.3.1",
+    "firebase-admin": "^13.2.0",
+    "firebase-functions": "^6.3.2",
     "jsonwebtoken": "^9.0.2",
     "query-string": "^9.1.1",
     "react": "^18.3.1",
@@ -40,7 +42,9 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-  
-  }
+  "description": "This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).",
+  "main": "generate-apple-secret.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
