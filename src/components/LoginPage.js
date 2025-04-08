@@ -27,7 +27,7 @@ const LoginPage = () => {
         clientId: 'com.example.raffle-Fox.service',
         scope: 'email name',
         redirectURI: 'https://rafflefox.netlify.app/auth/callback',
-        usePopup: false,
+        usePopup: true,
       });
       console.log('AppleID.auth initialized.');
     } else {
