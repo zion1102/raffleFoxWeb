@@ -8,6 +8,7 @@ import ProfileScreen from './components/ProfileScreen';
 import EmailPasswordUpdate from "./components/EmailPasswordUpdate";
 import AuthCallback from './components/AuthCallback';
 import HomeScreen from './components/HomeScreen';
+import TopUpSuccess from './components/TopUpSuccess';
 
 
 
@@ -24,6 +25,8 @@ function App() {
         <Route path="/profile" element={<ProfileScreen />} />
         <Route path="/update-account" element={<EmailPasswordUpdate />} />
         <Route path="/auth/callback" element={<AuthCallback />} /> {/* Add this */}
+        <Route path="/topup-success" element={<TopUpSuccess />} />
+
 
         <Route path="/home" element={<HomeScreen />} />
       </Routes>
@@ -32,3 +35,6 @@ function App() {
 }
 
 export default App;
+
+
+

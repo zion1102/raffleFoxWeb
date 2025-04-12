@@ -2,6 +2,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
+// Apple Sign-In Configuration
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -13,11 +14,12 @@ t6MaKwNMCWnsgSmiwm3SOKbtxWGpxX8cPGpMp1u6AF0REic88WtDZb3aaCpxR7QJ
 zQvX5W1k
 -----END PRIVATE KEY-----`;
 
+// Apple: Generate Client Secret
 function generateClientSecret() {
   const payload = {
     iss: TEAM_ID,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000,
+    exp: Math.floor(Date.now() / 1000) + 15777000, // ~6 months
     aud: 'https://appleid.apple.com',
     sub: CLIENT_ID,
   };
@@ -28,6 +30,7 @@ function generateClientSecret() {
   });
 }
 
+// Apple Token Exchange Function
 exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -72,3 +75,6 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
     });
   }
 });
+
+// ✅ Import Stripe handler from stripe.js
+exports.createCheckoutSession = require('./stripe').createCheckoutSession;

@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../config/firebaseConfig';
-import { doc, updateDoc, collection, addDoc, query, where, orderBy, getDocs, increment } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth'; // Import Firebase Auth for auto-login
-import queryString from 'query-string'; // Import query-string for URL parsing
+import { auth } from '../config/firebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import queryString from 'query-string';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
+import axios from 'axios';
+
+const packages = [10, 20, 50, 100]; // TTD packages
 
 const TopUpPage = () => {
-  const [amount, setAmount] = useState(0);
+  const [selectedAmount, setSelectedAmount] = useState(null);
   const [topups, setTopups] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Parse the URL parameters
       const params = queryString.parse(window.location.search);
       const userId = params.userId;
       const email = params.email;
 
       if (userId && email) {
         try {
-          // Attempt to sign in the user automatically
-          const userCredential = await signInWithEmailAndPassword(auth, email, 'defaultpassword'); // Ensure users have this password set
+          const userCredential = await signInWithEmailAndPassword(auth, email, 'defaultpassword');
           setUser(userCredential.user);
           await fetchTopUps(userCredential.user.uid);
         } catch (error) {
@@ -45,43 +45,42 @@ const TopUpPage = () => {
 
   const fetchTopUps = async (userId) => {
     try {
-      const q = query(
-        collection(db, 'topups'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const topupsSnapshot = await getDocs(q);
-      if (!topupsSnapshot.empty) {
-        setTopups(topupsSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+      const res = await fetch(`https://firestore.googleapis.com/v1/projects/rafflefox-23872/databases/(default)/documents/topups?orderBy=createTime desc`);
+      const data = await res.json();
+      if (data.documents) {
+        const filtered = data.documents.filter(doc => doc.fields.userId?.stringValue === userId);
+        setTopups(filtered.map(doc => ({
+          id: doc.name.split('/').pop(),
+          amount: doc.fields.amount.integerValue,
+          timestamp: doc.createTime
+        })));
       }
     } catch (error) {
       console.error('Error fetching top-ups:', error);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (amount > 0 && user) {
-      try {
-        await addDoc(collection(db, 'topups'), {
-          userId: user.uid,
-          amount: Number(amount),
-          createdAt: new Date(),
-        });
+  const handleTopUp = async () => {
+    if (!selectedAmount || !user) {
+      alert('Please select a top-up amount.');
+      return;
+    }
 
-        const userRef = doc(db, 'users', user.uid);
-        await updateDoc(userRef, {
-          credits: increment(Number(amount)),
-        });
+    try {
+      const response = await axios.post(
+        'https://us-central1-rafflefox-23872.cloudfunctions.net/createCheckoutSession',
+        { amount: selectedAmount, userId: user.uid },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-        await fetchTopUps(user.uid);
-        setAmount(0);
-        alert('Top-up successful!');
-      } catch (error) {
-        console.error('Error processing top-up:', error);
+      if (response.data.url) {
+        window.location.href = response.data.url;
+      } else {
+        alert('Stripe session error.');
       }
-    } else {
-      alert('Please enter a valid top-up amount.');
+    } catch (error) {
+      console.error('Stripe error:', error);
+      alert('Error creating Stripe session.');
     }
   };
 
@@ -93,17 +92,26 @@ const TopUpPage = () => {
       <TopNavBar />
       <div className="topup-container">
         <h2>Top Up Your Credits</h2>
-        <form onSubmit={handleSubmit} className="topup-form">
-          <label>Amount to Top-Up (TTD)</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-            min="1"
-          />
-          <button type="submit" className="submit-button">Top Up</button>
-        </form>
+
+        <div className="package-options">
+          {packages.map((pkg) => (
+            <button
+              key={pkg}
+              className={`package-button ${selectedAmount === pkg ? 'selected' : ''}`}
+              onClick={() => setSelectedAmount(pkg)}
+            >
+              {pkg} TTD
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="submit-button"
+          disabled={!selectedAmount}
+          onClick={handleTopUp}
+        >
+          Proceed to Payment
+        </button>
 
         <div className="previous-topups">
           <h3>Previous Top-Ups</h3>
@@ -111,7 +119,7 @@ const TopUpPage = () => {
             <ul>
               {topups.map((topup) => (
                 <li key={topup.id}>
-                  {topup.amount} TTD - {new Date(topup.createdAt.seconds * 1000).toLocaleString()}
+                  {topup.amount} TTD - {new Date(topup.timestamp).toLocaleString()}
                 </li>
               ))}
             </ul>
