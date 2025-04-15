@@ -10,6 +10,7 @@ const packages = [10, 20, 50, 100];
 
 const TopUpPage = () => {
   const [selectedAmount, setSelectedAmount] = useState(null);
+  const [customAmount, setCustomAmount] = useState('');
   const [topups, setTopups] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,8 +66,9 @@ const TopUpPage = () => {
   };
 
   const handleTopUp = async () => {
-    if (!selectedAmount || !user) {
-      alert('Please select a top-up amount.');
+    const amountToTopUp = selectedAmount || parseFloat(customAmount);
+    if (!amountToTopUp || isNaN(amountToTopUp) || amountToTopUp <= 0) {
+      alert('Please select or enter a valid top-up amount.');
       return;
     }
 
@@ -74,7 +76,7 @@ const TopUpPage = () => {
     try {
       const response = await axios.post(
         'https://us-central1-rafflefox-23872.cloudfunctions.net/createCheckoutSession',
-        { amount: selectedAmount, userId: user.uid },
+        { amount: amountToTopUp, userId: user.uid },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
@@ -103,21 +105,42 @@ const TopUpPage = () => {
       <div className="topup-container">
         <h2>Top Up Your Credits</h2>
 
-        <div className="package-options">
-          {packages.map((pkg) => (
-            <button
-              key={pkg}
-              className={`package-button ${selectedAmount === pkg ? 'selected' : ''}`}
-              onClick={() => setSelectedAmount(pkg)}
-            >
-              {pkg} TTD
-            </button>
-          ))}
+        <div className="section">
+          <p className="section-label">Choose a package:</p>
+          <div className="package-options">
+            {packages.map((pkg) => (
+              <button
+                key={pkg}
+                className={`package-button ${selectedAmount === pkg ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedAmount(pkg);
+                  setCustomAmount('');
+                }}
+              >
+                {pkg} TTD
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="section">
+          <p className="section-label">Or enter custom amount:</p>
+          <input
+            type="number"
+            min="1"
+            placeholder="Enter amount (TTD)"
+            value={customAmount}
+            onChange={(e) => {
+              setCustomAmount(e.target.value);
+              setSelectedAmount(null);
+            }}
+            className="custom-amount-input"
+          />
         </div>
 
         <button
-          className={`submit-button ${!selectedAmount || processing ? 'disabled' : ''}`}
-          disabled={!selectedAmount || processing}
+          className={`submit-button ${(!selectedAmount && !customAmount) || processing ? 'disabled' : ''}`}
+          disabled={(!selectedAmount && !customAmount) || processing}
           onClick={handleTopUp}
         >
           {processing ? 'Redirecting...' : 'Proceed to Payment'}
