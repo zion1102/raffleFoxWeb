@@ -6,13 +6,15 @@ import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
 import axios from 'axios';
 
-const packages = [10, 20, 50, 100]; // TTD packages
+const packages = [10, 20, 50, 100];
 
 const TopUpPage = () => {
   const [selectedAmount, setSelectedAmount] = useState(null);
   const [topups, setTopups] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -45,7 +47,9 @@ const TopUpPage = () => {
 
   const fetchTopUps = async (userId) => {
     try {
-      const res = await fetch(`https://firestore.googleapis.com/v1/projects/rafflefox-23872/databases/(default)/documents/topups?orderBy=createTime desc`);
+      const res = await fetch(
+        `https://firestore.googleapis.com/v1/projects/rafflefox-23872/databases/(default)/documents/topups?orderBy=createTime desc`
+      );
       const data = await res.json();
       if (data.documents) {
         const filtered = data.documents.filter(doc => doc.fields.userId?.stringValue === userId);
@@ -66,6 +70,7 @@ const TopUpPage = () => {
       return;
     }
 
+    setProcessing(true);
     try {
       const response = await axios.post(
         'https://us-central1-rafflefox-23872.cloudfunctions.net/createCheckoutSession',
@@ -74,18 +79,23 @@ const TopUpPage = () => {
       );
 
       if (response.data.url) {
-        window.location.href = response.data.url;
+        setShowSuccess(true);
+        setTimeout(() => {
+          window.location.href = response.data.url;
+        }, 1000);
       } else {
         alert('Stripe session error.');
+        setProcessing(false);
       }
     } catch (error) {
       console.error('Stripe error:', error);
       alert('Error creating Stripe session.');
+      setProcessing(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Please log in to view your top-ups.</div>;
+  if (loading) return <div className="loading">Loading...</div>;
+  if (!user) return <div className="loading">Please log in to view your top-ups.</div>;
 
   return (
     <div>
@@ -106,12 +116,19 @@ const TopUpPage = () => {
         </div>
 
         <button
-          className="submit-button"
-          disabled={!selectedAmount}
+          className={`submit-button ${!selectedAmount || processing ? 'disabled' : ''}`}
+          disabled={!selectedAmount || processing}
           onClick={handleTopUp}
         >
-          Proceed to Payment
+          {processing ? 'Redirecting...' : 'Proceed to Payment'}
         </button>
+
+        {showSuccess && (
+          <div className="success-popup">
+            <div className="checkmark-circle">&#10003;</div>
+            <p>Redirecting to payment...</p>
+          </div>
+        )}
 
         <div className="previous-topups">
           <h3>Previous Top-Ups</h3>
@@ -119,12 +136,12 @@ const TopUpPage = () => {
             <ul>
               {topups.map((topup) => (
                 <li key={topup.id}>
-                  {topup.amount} TTD - {new Date(topup.timestamp).toLocaleString()}
+                  {topup.amount} TTD <span className="timestamp">{new Date(topup.timestamp).toLocaleString()}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p>No previous top-ups found.</p>
+            <p className="no-topups">No previous top-ups found.</p>
           )}
         </div>
       </div>
