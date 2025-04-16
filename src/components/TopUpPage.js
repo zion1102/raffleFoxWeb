@@ -56,7 +56,8 @@ const TopUpPage = () => {
         const filtered = data.documents.filter(doc => doc.fields.userId?.stringValue === userId);
         setTopups(filtered.map(doc => ({
           id: doc.name.split('/').pop(),
-          amount: doc.fields.amount.integerValue,
+          amount: parseFloat(doc.fields.amount.integerValue || doc.fields.amount.doubleValue),
+          coins: doc.fields.coins?.integerValue || doc.fields.coins?.doubleValue || null,
           timestamp: doc.createTime
         })));
       }
@@ -97,13 +98,13 @@ const TopUpPage = () => {
   };
 
   if (loading) return <div className="loading">Loading...</div>;
-  if (!user) return <div className="loading">Please log in to view your top-ups.</div>;
+  if (!user) return <div className="loading">Please log in to view your gold coin purchases.</div>;
 
   return (
     <div>
       <TopNavBar />
       <div className="topup-container">
-        <h2>Top Up Your Credits</h2>
+        <h2>Top Up Your Gold Coins</h2>
 
         <div className="section">
           <p className="section-label">Choose a package:</p>
@@ -159,7 +160,8 @@ const TopUpPage = () => {
             <ul>
               {topups.map((topup) => (
                 <li key={topup.id}>
-                  {topup.amount} TTD <span className="timestamp">{new Date(topup.timestamp).toLocaleString()}</span>
+                  {topup.amount} TTD → {topup.coins ?? topup.amount / 10} gold coins
+                  <span className="timestamp">{new Date(topup.timestamp).toLocaleString()}</span>
                 </li>
               ))}
             </ul>
