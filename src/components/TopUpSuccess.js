@@ -1,44 +1,55 @@
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../config/firebaseConfig';
-import { doc, updateDoc, increment, collection, addDoc } from 'firebase/firestore';
+import { auth } from '../config/firebaseConfig';
 import queryString from 'query-string';
 
 const TopUpSuccess = () => {
   const navigate = useNavigate();
+  const [message, setMessage] = useState('Finalizing your top-up...');
 
   useEffect(() => {
     const { amount, userId } = queryString.parse(window.location.search);
-    if (amount && userId) {
-      const finalizeTopUp = async () => {
-        try {
-          await addDoc(collection(db, 'topups'), {
+
+    const finalizeTopUp = async (user) => {
+      try {
+        const res = await fetch('https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: parseFloat(amount),
             userId,
-            amount: Number(amount),
-            createdAt: new Date(),
-          });
+          }),
+        });
 
-          const userRef = doc(db, 'users', userId);
-          await updateDoc(userRef, {
-            credits: increment(Number(amount)),
-          });
-
-          alert('Top-up successful!');
-          navigate('/topup');
-        } catch (err) {
-          console.error('Finalizing top-up failed:', err);
-          alert('Top-up processing error.');
+        const data = await res.json();
+        if (data.success) {
+          setMessage(`🎉 ${data.coins} Gold Coins added to your account!`);
+          setTimeout(() => navigate('/topup'), 2000);
+        } else {
+          throw new Error(data.error || 'Unknown error');
         }
-      };
+      } catch (err) {
+        console.error('Top-up finalization failed:', err);
+        setMessage('Something went wrong. Please contact support.');
+      }
+    };
 
-      finalizeTopUp();
-    } else {
-      alert('Invalid top-up URL.');
-      navigate('/topup');
-    }
+    // Wait for auth state
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && amount && userId) {
+        finalizeTopUp(user);
+      } else if (!user) {
+        setMessage('You are not logged in. Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
+      }
+    });
+
+    return () => unsubscribe();
   }, [navigate]);
 
-  return <h2>Finalizing your top-up...</h2>;
+  return <div style={{ padding: '2rem', textAlign: 'center' }}><h2>{message}</h2></div>;
 };
 
 export default TopUpSuccess;

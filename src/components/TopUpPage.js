@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../config/firebaseConfig';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import queryString from 'query-string';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
 import axios from 'axios';
@@ -18,32 +16,17 @@ const TopUpPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const params = queryString.parse(window.location.search);
-      const userId = params.userId;
-      const email = params.email;
-
-      if (userId && email) {
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, 'defaultpassword');
-          setUser(userCredential.user);
-          await fetchTopUps(userCredential.user.uid);
-        } catch (error) {
-          console.error("Auto-login failed:", error);
-        }
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        await fetchTopUps(currentUser.uid);
       } else {
-        auth.onAuthStateChanged(async (currentUser) => {
-          if (currentUser) {
-            setUser(currentUser);
-            await fetchTopUps(currentUser.uid);
-          }
-        });
+        setUser(null);
       }
-
       setLoading(false);
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
   const fetchTopUps = async (userId) => {
@@ -58,7 +41,7 @@ const TopUpPage = () => {
           id: doc.name.split('/').pop(),
           amount: parseFloat(doc.fields.amount.integerValue || doc.fields.amount.doubleValue),
           coins: doc.fields.coins?.integerValue || doc.fields.coins?.doubleValue || null,
-          timestamp: doc.createTime
+          timestamp: doc.createTime,
         })));
       }
     } catch (error) {
