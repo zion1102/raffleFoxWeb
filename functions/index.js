@@ -1,4 +1,7 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY'); // ✅ Secure Stripe key via Firebase Secrets
+const stripeLib = require('stripe');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -10,7 +13,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Apple Sign-In Config
+// 🔐 Apple Sign-In Config
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -83,10 +86,10 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
   }
 });
 
-// 💳 Stripe Checkout Session Creation
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'YOUR_STRIPE_SECRET_KEY');
+// 💳 Create Stripe Checkout Session
+exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
+  const stripe = stripeLib(stripeSecret.value()); // ✅ Use the secret securely
 
-exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
   const { amount, userId } = req.body;
 
   if (!amount || !userId) {
@@ -94,9 +97,7 @@ exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
   }
 
   try {
-    // ✅ Create Firebase custom token for the user
     const token = await admin.auth().createCustomToken(userId);
-
     const successUrl = `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}&token=${token}`;
 
     const session = await stripe.checkout.sessions.create({
@@ -122,7 +123,7 @@ exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
   }
 });
 
-// ✅ Finalize Top-Up After Successful Payment
+// ✅ Handle Post-Payment: Add Top-Up Record and Update Credits
 exports.topupSuccessHandler = onRequest({ cors: true }, async (req, res) => {
   const { amount, userId } = req.body;
 
