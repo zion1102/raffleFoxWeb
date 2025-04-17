@@ -2,6 +2,9 @@ const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+const { defineSecret } = require('firebase-functions/params');
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
+const stripeLib = require('stripe');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -10,7 +13,8 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Apple Sign-In Config
+// -------------------- APPLE SIGN-IN --------------------
+
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -21,12 +25,11 @@ t6MaKwNMCWnsgSmiwm3SOKbtxWGpxX8cPGpMp1u6AF0REic88WtDZb3aaCpxR7QJ
 zQvX5W1k
 -----END PRIVATE KEY-----`;
 
-// 🔐 Generate Apple Client Secret
 function generateClientSecret() {
   const payload = {
     iss: TEAM_ID,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000,
+    exp: Math.floor(Date.now() / 1000) + 15777000, // 6 months
     aud: 'https://appleid.apple.com',
     sub: CLIENT_ID,
   };
@@ -37,7 +40,6 @@ function generateClientSecret() {
   });
 }
 
-// 🍎 Apple Token Exchange
 exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -83,10 +85,10 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
   }
 });
 
-// 💳 Stripe Checkout Session Creation
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'YOUR_STRIPE_SECRET_KEY');
+// -------------------- STRIPE CHECKOUT --------------------
 
-exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
+exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
+  const stripe = stripeLib(stripeSecret.value());
   const { amount, userId } = req.body;
 
   if (!amount || !userId) {
@@ -94,22 +96,22 @@ exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
   }
 
   try {
+    const token = await admin.auth().createCustomToken(userId);
+    const successUrl = `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}&token=${token}`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'ttd',
           product_data: { name: `${amount} TTD Gold Coin Top-Up` },
-          unit_amount: amount * 100, // Stripe expects cents
+          unit_amount: amount * 100,
         },
         quantity: 1,
       }],
       mode: 'payment',
-      metadata: {
-        userId,
-        amount,
-      },
-      success_url: `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}`,
+      metadata: { userId, amount },
+      success_url: successUrl,
       cancel_url: `https://rafflefox.netlify.app/topup`,
     });
 
@@ -120,7 +122,8 @@ exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
   }
 });
 
-// ✅ Firestore: Process Final Top-Up After Success
+// -------------------- FIRESTORE TOP-UP HANDLER --------------------
+
 exports.topupSuccessHandler = onRequest({ cors: true }, async (req, res) => {
   const { amount, userId } = req.body;
 

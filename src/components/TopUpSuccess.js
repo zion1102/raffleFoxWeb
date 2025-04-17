@@ -1,55 +1,55 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebaseConfig';
-import queryString from 'query-string';
+import { signInWithCustomToken } from 'firebase/auth';
+import axios from 'axios';
 
 const TopUpSuccess = () => {
   const navigate = useNavigate();
-  const [message, setMessage] = useState('Finalizing your top-up...');
 
   useEffect(() => {
-    const { amount, userId } = queryString.parse(window.location.search);
+    const finalizeTopUp = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const amount = parseFloat(params.get('amount'));
+      const userId = params.get('userId');
+      const token = params.get('token');
 
-    const finalizeTopUp = async (user) => {
+      if (!amount || !userId || !token) {
+        alert('Missing top-up information.');
+        navigate('/login');
+        return;
+      }
+
       try {
-        const res = await fetch('https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: parseFloat(amount),
-            userId,
-          }),
-        });
+        // Sign in the user silently using the custom token
+        await signInWithCustomToken(auth, token);
 
-        const data = await res.json();
-        if (data.success) {
-          setMessage(`🎉 ${data.coins} Gold Coins added to your account!`);
-          setTimeout(() => navigate('/topup'), 2000);
+        // Finalize the top-up by calling your backend
+        const res = await axios.post(
+          'https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler',
+          { amount, userId },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        if (res.data.success) {
+          alert(`Successfully added ${res.data.coins} gold coins!`);
         } else {
-          throw new Error(data.error || 'Unknown error');
+          console.error(res.data);
+          alert('Top-up recorded, but something went wrong.');
         }
-      } catch (err) {
-        console.error('Top-up finalization failed:', err);
-        setMessage('Something went wrong. Please contact support.');
+
+        navigate('/topup');
+      } catch (error) {
+        console.error('Finalizing top-up failed:', error);
+        alert('Top-up failed. Please try again.');
+        navigate('/login');
       }
     };
 
-    // Wait for auth state
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && amount && userId) {
-        finalizeTopUp(user);
-      } else if (!user) {
-        setMessage('You are not logged in. Redirecting to login...');
-        setTimeout(() => navigate('/login'), 2000);
-      }
-    });
-
-    return () => unsubscribe();
+    finalizeTopUp();
   }, [navigate]);
 
-  return <div style={{ padding: '2rem', textAlign: 'center' }}><h2>{message}</h2></div>;
+  return <p>Finalizing top-up...</p>;
 };
 
 export default TopUpSuccess;
