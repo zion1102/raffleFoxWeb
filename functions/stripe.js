@@ -17,21 +17,22 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
   }
 
   try {
+    const token = await admin.auth().createCustomToken(userId);
+    const successUrl = `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}&token=${token}`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
           currency: 'ttd',
-          product_data: {
-            name: `${amount} TTD Credit Top-Up`,
-          },
+          product_data: { name: `${amount} TTD Gold Coin Top-Up` },
           unit_amount: amount * 100,
         },
         quantity: 1,
       }],
       mode: 'payment',
       metadata: { userId, amount },
-      success_url: `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}`,
+      success_url: successUrl,
       cancel_url: `https://rafflefox.netlify.app/topup`,
     });
 

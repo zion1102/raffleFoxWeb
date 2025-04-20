@@ -1,12 +1,12 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
-const stripeSecret = defineSecret('STRIPE_SECRET_KEY'); // ✅ Secure Stripe key via Firebase Secrets
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY'); // Secure Stripe Key
 const stripeLib = require('stripe');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
-// Initialize Firebase Admin
+// ✅ Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -24,130 +24,69 @@ t6MaKwNMCWnsgSmiwm3SOKbtxWGpxX8cPGpMp1u6AF0REic88WtDZb3aaCpxR7QJ
 zQvX5W1k
 -----END PRIVATE KEY-----`;
 
-// 🔐 Generate Apple Client Secret
 function generateClientSecret() {
-  const payload = {
+  return jwt.sign({
     iss: TEAM_ID,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 15777000,
     aud: 'https://appleid.apple.com',
     sub: CLIENT_ID,
-  };
-
-  return jwt.sign(payload, privateKey, {
+  }, privateKey, {
     algorithm: 'ES256',
     keyid: KEY_ID,
   });
 }
 
-// 🍎 Apple Token Exchange
+// Apple Exchange Function
 exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   res.set('Access-Control-Allow-Methods', 'POST');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return;
-  }
+  if (req.method === 'OPTIONS') return res.status(204).send();
 
   const { code } = req.body;
-
-  if (!code) {
-    return res.status(400).json({ error: 'Authorization code is required' });
-  }
+  if (!code) return res.status(400).json({ error: 'Authorization code is required' });
 
   try {
     const clientSecret = generateClientSecret();
-
-    const response = await axios.post(
-      'https://appleid.apple.com/auth/token',
-      null,
-      {
-        params: {
-          client_id: CLIENT_ID,
-          client_secret: clientSecret,
-          code,
-          grant_type: 'authorization_code',
-        },
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
-
+    const response = await axios.post('https://appleid.apple.com/auth/token', null, {
+      params: {
+        client_id: CLIENT_ID,
+        client_secret: clientSecret,
+        code,
+        grant_type: 'authorization_code',
+      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
     res.json(response.data);
-  } catch (error) {
-    console.error('Apple exchange error:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Token exchange failed',
-      details: error.response?.data || 'Unknown error',
-    });
+  } catch (err) {
+    console.error('Apple exchange error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Token exchange failed', details: err.response?.data || 'Unknown error' });
   }
 });
 
-// 💳 Create Stripe Checkout Session
-exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
-  const stripe = stripeLib(stripeSecret.value()); // ✅ Use the secret securely
-
-  const { amount, userId } = req.body;
-
-  if (!amount || !userId) {
-    return res.status(400).json({ error: 'Amount and userId are required' });
-  }
-
-  try {
-    const token = await admin.auth().createCustomToken(userId);
-    const successUrl = `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}&token=${token}`;
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'ttd',
-          product_data: { name: `${amount} TTD Gold Coin Top-Up` },
-          unit_amount: amount * 100,
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      metadata: { userId, amount },
-      success_url: successUrl,
-      cancel_url: `https://rafflefox.netlify.app/topup`,
-    });
-
-    res.status(200).json({ url: session.url });
-  } catch (error) {
-    console.error('Stripe session error:', error);
-    res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
-  }
-});
-
-// ✅ Handle Post-Payment: Add Top-Up Record and Update Credits
+// Handle Top-Up After Stripe Redirect
 exports.topupSuccessHandler = onRequest({ cors: true }, async (req, res) => {
   const { amount, userId } = req.body;
-
-  if (!amount || !userId) {
-    return res.status(400).json({ error: 'Missing amount or userId' });
-  }
+  if (!amount || !userId) return res.status(400).json({ error: 'Missing amount or userId' });
 
   try {
-    const coins = Math.floor(amount / 10); // 10 TTD = 1 coin
-
+    const coins = Math.floor(amount / 10);
     await db.collection('topups').add({
       userId,
       amount,
       coins,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-
     await db.collection('users').doc(userId).update({
       credits: admin.firestore.FieldValue.increment(coins),
     });
-
     res.status(200).json({ success: true, coins });
   } catch (err) {
     console.error('Top-up DB write error:', err);
     res.status(500).json({ error: 'Failed to update Firestore' });
   }
 });
+
+// Export createCheckoutSession from stripe.js
+exports.createCheckoutSession = require('./stripe').createCheckoutSession;

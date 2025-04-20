@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebaseConfig';
 import { signInWithCustomToken } from 'firebase/auth';
@@ -6,6 +6,7 @@ import axios from 'axios';
 
 const TopUpSuccess = () => {
   const navigate = useNavigate();
+  const [status, setStatus] = useState('Finalizing top-up...');
 
   useEffect(() => {
     const finalizeTopUp = async () => {
@@ -15,16 +16,17 @@ const TopUpSuccess = () => {
       const token = params.get('token');
 
       if (!amount || !userId || !token) {
-        alert('Missing top-up information.');
+        alert('Missing top-up info.');
         navigate('/login');
         return;
       }
 
       try {
-        // Sign in the user silently using the custom token
+        // 🔐 Authenticate silently using the token
         await signInWithCustomToken(auth, token);
+        console.log('✅ Signed in successfully.');
 
-        // Finalize the top-up by calling your backend
+        // 💾 Finalize the top-up
         const res = await axios.post(
           'https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler',
           { amount, userId },
@@ -32,16 +34,15 @@ const TopUpSuccess = () => {
         );
 
         if (res.data.success) {
-          alert(`Successfully added ${res.data.coins} gold coins!`);
+          alert(`✅ ${res.data.coins} gold coins added!`);
         } else {
-          console.error(res.data);
-          alert('Top-up recorded, but something went wrong.');
+          alert('⚠️ Top-up saved, but something went wrong.');
         }
 
-        navigate('/topup');
+        navigate('/topup'); // ✅ redirect to topup
       } catch (error) {
-        console.error('Finalizing top-up failed:', error);
-        alert('Top-up failed. Please try again.');
+        console.error('Top-up error:', error);
+        alert('Top-up failed.');
         navigate('/login');
       }
     };
@@ -49,7 +50,7 @@ const TopUpSuccess = () => {
     finalizeTopUp();
   }, [navigate]);
 
-  return <p>Finalizing top-up...</p>;
+  return <p>{status}</p>;
 };
 
 export default TopUpSuccess;
