@@ -1,56 +1,51 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { auth } from '../config/firebaseConfig';
-import { signInWithCustomToken } from 'firebase/auth';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const TopUpSuccess = () => {
+  const [status, setStatus] = useState('Processing top-up...');
   const navigate = useNavigate();
-  const [status, setStatus] = useState('Finalizing top-up...');
 
   useEffect(() => {
-    const finalizeTopUp = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const amount = parseFloat(params.get('amount'));
-      const userId = params.get('userId');
-      const token = params.get('token');
+    const urlParams = new URLSearchParams(window.location.search);
+    const amount = urlParams.get('amount');
+    const userId = urlParams.get('userId');
+    const token = urlParams.get('token');
 
-      if (!amount || !userId || !token) {
-        alert('Missing top-up info.');
-        navigate('/login');
-        return;
-      }
+    if (!amount || !userId || !token) {
+      setStatus('Missing data in redirect URL.');
+      return;
+    }
 
+    const processTopUp = async () => {
       try {
-        // 🔐 Authenticate silently using the token
-        await signInWithCustomToken(auth, token);
-        console.log('✅ Signed in successfully.');
+        // 1️⃣ Authenticate the user
+        await auth.signInWithCustomToken(token);
 
-        // 💾 Finalize the top-up
-        const res = await axios.post(
+        // 2️⃣ Call the backend to finalize top-up
+        await axios.post(
           'https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler',
-          { amount, userId },
+          { amount: parseFloat(amount), userId },
           { headers: { 'Content-Type': 'application/json' } }
         );
 
-        if (res.data.success) {
-          alert(`✅ ${res.data.coins} gold coins added!`);
-        } else {
-          alert('⚠️ Top-up saved, but something went wrong.');
-        }
-
-        navigate('/topup'); // ✅ redirect to topup
-      } catch (error) {
-        console.error('Top-up error:', error);
-        alert('Top-up failed.');
-        navigate('/login');
+        setStatus('Top-up successful! Redirecting...');
+        setTimeout(() => navigate('/topup'), 3000); // go back to TopUp screen
+      } catch (err) {
+        console.error('Top-up processing error:', err);
+        setStatus('Error finalizing top-up.');
       }
     };
 
-    finalizeTopUp();
+    processTopUp();
   }, [navigate]);
 
-  return <p>{status}</p>;
+  return (
+    <div className="topup-success-container">
+      <h2>{status}</h2>
+    </div>
+  );
 };
 
 export default TopUpSuccess;
