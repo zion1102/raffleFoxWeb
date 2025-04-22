@@ -17,17 +17,40 @@ const TopUpPage = () => {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const amount = urlParams.get('amount');
+      const userId = urlParams.get('userId');
+      const token = urlParams.get('token');
+  
+      if (token && userId && amount) {
+        try {
+          await auth.signInWithCustomToken(token);
+          await axios.post(
+            'https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler',
+            { amount: parseFloat(amount), userId },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+  
+          // Clean the URL
+          window.history.replaceState(null, '', '/topup');
+        } catch (err) {
+          console.error('Top-up post-processing failed:', err);
+        }
+      }
+  
       if (currentUser) {
         setUser(currentUser);
         await fetchTopUps(currentUser.uid);
       } else {
         setUser(null);
       }
+  
       setLoading(false);
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
   const fetchTopUps = async (userId) => {
     try {

@@ -8,17 +8,16 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+// stripe.js (Cloud Function)
 exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
   const stripe = stripeLib(stripeSecret.value());
   const { amount, userId } = req.body;
 
-  if (!amount || !userId) {
-    return res.status(400).json({ error: 'Amount and userId are required' });
-  }
+  if (!amount || !userId) return res.status(400).json({ error: 'Amount and userId are required' });
 
   try {
     const token = await admin.auth().createCustomToken(userId);
-    const successUrl = `https://rafflefox.netlify.app/topup-success?amount=${amount}&userId=${userId}&token=${token}`;
+    const successUrl = `https://rafflefox.netlify.app/topup?amount=${amount}&userId=${userId}&token=${token}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -42,3 +41,4 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
     res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
   }
 });
+
