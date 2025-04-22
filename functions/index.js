@@ -1,13 +1,14 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { onRequest: onExpressRequest } = require('firebase-functions/v1/https'); // for Stripe webhooks
+const { onRequest: onExpressRequest } = require('firebase-functions/v1/https');
 const { defineSecret } = require('firebase-functions/params');
-const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
-const stripeLib = require('stripe');
 const admin = require('firebase-admin');
-const bodyParser = require('body-parser');
+const stripeLib = require('stripe');
 const express = require('express');
-const axios = require('axios');
+const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
+
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -60,6 +61,7 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
       },
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
+
     res.json(response.data);
   } catch (err) {
     console.error('Apple exchange error:', err.response?.data || err.message);
@@ -89,7 +91,7 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
       }],
       mode: 'payment',
       metadata: { userId, amount },
-      success_url: `https://rafflefox.netlify.app/topup`,
+      success_url: `https://rafflefox.netlify.app/topup`,  // simple clean redirect
       cancel_url: `https://rafflefox.netlify.app/topup`,
     });
 
@@ -113,7 +115,7 @@ webhookApp.post('/stripe-webhook', async (req, res) => {
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error('⚠️ Webhook signature verification failed.', err.message);
+    console.error('⚠️ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
