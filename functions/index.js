@@ -1,19 +1,21 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { onRequest: onExpressRequest } = require('firebase-functions/v1/https'); // for Stripe webhooks
 const { defineSecret } = require('firebase-functions/params');
-const stripeSecret = defineSecret('STRIPE_SECRET_KEY'); // Secure Stripe Key
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
 const stripeLib = require('stripe');
 const admin = require('firebase-admin');
+const bodyParser = require('body-parser');
+const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
-// ✅ Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const db = admin.firestore();
 
-// 🔐 Apple Sign-In Config
+// 🧾 Apple Sign-In Config
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -37,7 +39,7 @@ function generateClientSecret() {
   });
 }
 
-// Apple Exchange Function
+// 🍎 Apple Sign-In Token Exchange
 exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -65,28 +67,83 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
   }
 });
 
-// Handle Top-Up After Stripe Redirect
-exports.topupSuccessHandler = onRequest({ cors: true }, async (req, res) => {
+// 💳 Create Stripe Checkout Session
+exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
+  const stripe = stripeLib(stripeSecret.value());
   const { amount, userId } = req.body;
-  if (!amount || !userId) return res.status(400).json({ error: 'Missing amount or userId' });
+
+  if (!amount || !userId) {
+    return res.status(400).json({ error: 'Amount and userId are required' });
+  }
 
   try {
-    const coins = Math.floor(amount / 10);
-    await db.collection('topups').add({
-      userId,
-      amount,
-      coins,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'ttd',
+          product_data: { name: `${amount} TTD Gold Coin Top-Up` },
+          unit_amount: amount * 100,
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      metadata: { userId, amount },
+      success_url: `https://rafflefox.netlify.app/topup`,
+      cancel_url: `https://rafflefox.netlify.app/topup`,
     });
-    await db.collection('users').doc(userId).update({
-      credits: admin.firestore.FieldValue.increment(coins),
-    });
-    res.status(200).json({ success: true, coins });
-  } catch (err) {
-    console.error('Top-up DB write error:', err);
-    res.status(500).json({ error: 'Failed to update Firestore' });
+
+    res.status(200).json({ url: session.url });
+  } catch (error) {
+    console.error('Stripe session error:', error);
+    res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
   }
 });
 
-// Export createCheckoutSession from stripe.js
-exports.createCheckoutSession = require('./stripe').createCheckoutSession;
+// ✅ Stripe Webhook to finalize top-up
+const webhookApp = express();
+webhookApp.use(bodyParser.raw({ type: 'application/json' }));
+
+webhookApp.post('/stripe-webhook', async (req, res) => {
+  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('⚠️ Webhook signature verification failed.', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const userId = session.metadata?.userId;
+    const amount = parseFloat(session.metadata?.amount);
+
+    if (userId && amount) {
+      const coins = Math.floor(amount / 10);
+      try {
+        await db.collection('topups').add({
+          userId,
+          amount,
+          coins,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        await db.collection('users').doc(userId).update({
+          credits: admin.firestore.FieldValue.increment(coins),
+        });
+
+        console.log(`✅ Top-up of ${coins} coins added for user ${userId}`);
+      } catch (err) {
+        console.error('❌ Failed to record top-up:', err);
+      }
+    }
+  }
+
+  res.status(200).send('Webhook received');
+});
+
+exports.stripeWebhook = onExpressRequest(webhookApp);
