@@ -106,7 +106,7 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
 const webhookApp = express();
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
-webhookApp.post('/stripe-webhook', async (req, res) => {
+webhookApp.post('/', async (req, res) => {
   const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
