@@ -10,10 +10,10 @@ const axios = require('axios');
 
 const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
 
+// Initialize Firebase
 if (!admin.apps.length) {
   admin.initializeApp();
 }
-
 const db = admin.firestore();
 
 // 🧾 Apple Sign-In Config
@@ -102,7 +102,7 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
   }
 });
 
-// ✅ Stripe Webhook to finalize top-up
+// ✅ Stripe Webhook
 const webhookApp = express();
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
@@ -114,8 +114,9 @@ webhookApp.post('/stripe-webhook', async (req, res) => {
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log('✅ Stripe webhook verified');
   } catch (err) {
-    console.error('⚠️ Webhook signature verification failed.', err.message);
+    console.error('⚠️ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -124,24 +125,30 @@ webhookApp.post('/stripe-webhook', async (req, res) => {
     const userId = session.metadata?.userId;
     const amount = parseFloat(session.metadata?.amount);
 
-    if (userId && amount) {
-      const coins = Math.floor(amount / 10);
-      try {
-        await db.collection('topups').add({
-          userId,
-          amount,
-          coins,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+    if (!userId || !amount) {
+      console.warn('Missing metadata in Stripe session');
+      return res.status(400).send('Missing metadata');
+    }
 
-        await db.collection('users').doc(userId).update({
-          credits: admin.firestore.FieldValue.increment(coins),
-        });
+    const coins = Math.floor(amount / 10);
+    try {
+      // Add to topups
+      await db.collection('topups').add({
+        userId,
+        amount,
+        coins,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-        console.log(`✅ Top-up of ${coins} coins added for user ${userId}`);
-      } catch (err) {
-        console.error('❌ Failed to record top-up:', err);
-      }
+      // Update user credits
+      await db.collection('users').doc(userId).update({
+        credits: admin.firestore.FieldValue.increment(coins),
+      });
+
+      console.log(`✅ ${coins} coins added to user ${userId}`);
+    } catch (err) {
+      console.error('❌ Firestore update failed:', err.message);
+      return res.status(500).send('Firestore error');
     }
   }
 
