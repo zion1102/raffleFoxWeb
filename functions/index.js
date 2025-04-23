@@ -91,7 +91,7 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
       }],
       mode: 'payment',
       metadata: { userId, amount },
-      success_url: `https://rafflefox.netlify.app/topup`,  // simple clean redirect
+      success_url: `https://rafflefox.netlify.app/topup`,
       cancel_url: `https://rafflefox.netlify.app/topup`,
     });
 
@@ -115,7 +115,7 @@ webhookApp.post('/stripe-webhook', async (req, res) => {
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error('⚠️ Webhook signature verification failed:', err.message);
+    console.error('⚠️ Webhook signature verification failed.', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
