@@ -8,9 +8,11 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
+// 🔐 Define Stripe secrets
 const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
+const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 
-// Initialize Firebase
+// ✅ Initialize Firebase
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -28,16 +30,20 @@ zQvX5W1k
 -----END PRIVATE KEY-----`;
 
 function generateClientSecret() {
-  return jwt.sign({
-    iss: TEAM_ID,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000,
-    aud: 'https://appleid.apple.com',
-    sub: CLIENT_ID,
-  }, privateKey, {
-    algorithm: 'ES256',
-    keyid: KEY_ID,
-  });
+  return jwt.sign(
+    {
+      iss: TEAM_ID,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 15777000,
+      aud: 'https://appleid.apple.com',
+      sub: CLIENT_ID,
+    },
+    privateKey,
+    {
+      algorithm: 'ES256',
+      keyid: KEY_ID,
+    }
+  );
 }
 
 // 🍎 Apple Sign-In Token Exchange
@@ -102,7 +108,7 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
   }
 });
 
-// ✅ Stripe Webhook
+// ✅ Stripe Webhook: FINALIZED
 const webhookApp = express();
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
@@ -126,13 +132,12 @@ webhookApp.post('/', async (req, res) => {
     const amount = parseFloat(session.metadata?.amount);
 
     if (!userId || !amount) {
-      console.warn('Missing metadata in Stripe session');
+      console.warn('❌ Missing metadata in Stripe session');
       return res.status(400).send('Missing metadata');
     }
 
     const coins = Math.floor(amount / 10);
     try {
-      // Add to topups
       await db.collection('topups').add({
         userId,
         amount,
@@ -140,12 +145,11 @@ webhookApp.post('/', async (req, res) => {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Update user credits
       await db.collection('users').doc(userId).update({
         credits: admin.firestore.FieldValue.increment(coins),
       });
 
-      console.log(`✅ ${coins} coins added to user ${userId}`);
+      console.log(`✅ Top-up: ${coins} coins added to user ${userId}`);
     } catch (err) {
       console.error('❌ Firestore update failed:', err.message);
       return res.status(500).send('Firestore error');
@@ -155,4 +159,5 @@ webhookApp.post('/', async (req, res) => {
   res.status(200).send('Webhook received');
 });
 
+// 🚀 Export webhook properly for Express-style routing
 exports.stripeWebhook = onExpressRequest(webhookApp);
