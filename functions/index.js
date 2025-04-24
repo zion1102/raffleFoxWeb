@@ -1,5 +1,4 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const { onRequest: onExpressRequest } = require('firebase-functions/v1/https');
+const functions = require('firebase-functions');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const stripeLib = require('stripe');
@@ -8,17 +7,17 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
-// 🔐 Define Stripe secrets
-const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
-const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
-
-// ✅ Initialize Firebase
+// Firebase Init
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-// 🧾 Apple Sign-In Config
+// Stripe secrets
+const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
+const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
+
+// Apple Sign-In Config
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -30,24 +29,20 @@ zQvX5W1k
 -----END PRIVATE KEY-----`;
 
 function generateClientSecret() {
-  return jwt.sign(
-    {
-      iss: TEAM_ID,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 15777000,
-      aud: 'https://appleid.apple.com',
-      sub: CLIENT_ID,
-    },
-    privateKey,
-    {
-      algorithm: 'ES256',
-      keyid: KEY_ID,
-    }
-  );
+  return jwt.sign({
+    iss: TEAM_ID,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 15777000,
+    aud: 'https://appleid.apple.com',
+    sub: CLIENT_ID,
+  }, privateKey, {
+    algorithm: 'ES256',
+    keyid: KEY_ID,
+  });
 }
 
-// 🍎 Apple Sign-In Token Exchange
-exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, res) => {
+// Apple Sign-In
+exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   res.set('Access-Control-Allow-Methods', 'POST');
@@ -67,22 +62,19 @@ exports.exchangeAppleToken = onRequest({ region: 'us-central1' }, async (req, re
       },
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
-
     res.json(response.data);
   } catch (err) {
     console.error('Apple exchange error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Token exchange failed', details: err.response?.data || 'Unknown error' });
+    res.status(500).json({ error: 'Token exchange failed' });
   }
 });
 
-// 💳 Create Stripe Checkout Session
-exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] }, async (req, res) => {
-  const stripe = stripeLib(stripeSecret.value());
+// Stripe Checkout (v1)
+exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
+  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
   const { amount, userId } = req.body;
 
-  if (!amount || !userId) {
-    return res.status(400).json({ error: 'Amount and userId are required' });
-  }
+  if (!amount || !userId) return res.status(400).json({ error: 'Missing amount or userId' });
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -100,15 +92,14 @@ exports.createCheckoutSession = onRequest({ cors: true, secrets: [stripeSecret] 
       success_url: `https://rafflefox.netlify.app/topup`,
       cancel_url: `https://rafflefox.netlify.app/topup`,
     });
-
     res.status(200).json({ url: session.url });
-  } catch (error) {
-    console.error('Stripe session error:', error);
-    res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
+  } catch (err) {
+    console.error('Stripe session error:', err.message);
+    res.status(500).json({ error: 'Stripe session failed' });
   }
 });
 
-// ✅ Stripe Webhook: FINALIZED
+// Stripe Webhook (Express)
 const webhookApp = express();
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
@@ -120,9 +111,9 @@ webhookApp.post('/', async (req, res) => {
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    console.log('✅ Stripe webhook verified');
+    console.log('✅ Webhook verified');
   } catch (err) {
-    console.error('⚠️ Webhook signature verification failed:', err.message);
+    console.error('⚠️ Webhook error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -131,10 +122,7 @@ webhookApp.post('/', async (req, res) => {
     const userId = session.metadata?.userId;
     const amount = parseFloat(session.metadata?.amount);
 
-    if (!userId || !amount) {
-      console.warn('❌ Missing metadata in Stripe session');
-      return res.status(400).send('Missing metadata');
-    }
+    if (!userId || !amount) return res.status(400).send('Missing metadata');
 
     const coins = Math.floor(amount / 10);
     try {
@@ -149,9 +137,9 @@ webhookApp.post('/', async (req, res) => {
         credits: admin.firestore.FieldValue.increment(coins),
       });
 
-      console.log(`✅ Top-up: ${coins} coins added to user ${userId}`);
+      console.log(`✅ ${coins} coins added for user ${userId}`);
     } catch (err) {
-      console.error('❌ Firestore update failed:', err.message);
+      console.error('❌ Firestore error:', err.message);
       return res.status(500).send('Firestore error');
     }
   }
@@ -159,5 +147,4 @@ webhookApp.post('/', async (req, res) => {
   res.status(200).send('Webhook received');
 });
 
-// 🚀 Export webhook properly for Express-style routing
-exports.stripeWebhook = onExpressRequest(webhookApp);
+exports.stripeWebhook = functions.https.onRequest(webhookApp);
