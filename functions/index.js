@@ -1,5 +1,4 @@
 const functions = require('firebase-functions');
-const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const stripeLib = require('stripe');
 const express = require('express');
@@ -7,17 +6,13 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
-// Firebase Init
+// 🔥 Initialize Firebase
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-// Stripe secrets
-const stripeSecret = defineSecret('STRIPE_SECRET_KEY');
-const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
-
-// Apple Sign-In Config
+// 🔐 Apple Sign-In Config
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -41,7 +36,7 @@ function generateClientSecret() {
   });
 }
 
-// Apple Sign-In
+// 🍎 Apple Sign-In Token Exchange
 exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -62,6 +57,7 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
       },
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
+
     res.json(response.data);
   } catch (err) {
     console.error('Apple exchange error:', err.response?.data || err.message);
@@ -69,12 +65,19 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// Stripe Checkout (v1)
+// 💳 Stripe Checkout Session
 exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
-  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY); // ✅ Move inside the function
   const { amount, userId } = req.body;
 
-  if (!amount || !userId) return res.status(400).json({ error: 'Missing amount or userId' });
+  if (!amount || !userId) {
+    return res.status(400).json({ error: 'Amount and userId are required' });
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -89,22 +92,23 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
       }],
       mode: 'payment',
       metadata: { userId, amount },
-      success_url: `https://rafflefox.netlify.app/topup`,
-      cancel_url: `https://rafflefox.netlify.app/topup`,
+      success_url: 'https://rafflefox.netlify.app/topup',
+      cancel_url: 'https://rafflefox.netlify.app/topup',
     });
+
     res.status(200).json({ url: session.url });
-  } catch (err) {
-    console.error('Stripe session error:', err.message);
-    res.status(500).json({ error: 'Stripe session failed' });
+  } catch (error) {
+    console.error('Stripe session error:', error.message);
+    res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
   }
 });
 
-// Stripe Webhook (Express)
+// 🔁 Stripe Webhook
 const webhookApp = express();
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
 webhookApp.post('/', async (req, res) => {
-  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY);
+  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY); // ✅ Move inside function
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -113,7 +117,7 @@ webhookApp.post('/', async (req, res) => {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     console.log('✅ Webhook verified');
   } catch (err) {
-    console.error('⚠️ Webhook error:', err.message);
+    console.error('⚠️ Webhook signature error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -122,7 +126,10 @@ webhookApp.post('/', async (req, res) => {
     const userId = session.metadata?.userId;
     const amount = parseFloat(session.metadata?.amount);
 
-    if (!userId || !amount) return res.status(400).send('Missing metadata');
+    if (!userId || !amount) {
+      console.warn('❌ Missing metadata in session');
+      return res.status(400).send('Missing metadata');
+    }
 
     const coins = Math.floor(amount / 10);
     try {
@@ -137,9 +144,9 @@ webhookApp.post('/', async (req, res) => {
         credits: admin.firestore.FieldValue.increment(coins),
       });
 
-      console.log(`✅ ${coins} coins added for user ${userId}`);
+      console.log(`✅ ${coins} coins added to user ${userId}`);
     } catch (err) {
-      console.error('❌ Firestore error:', err.message);
+      console.error('❌ Firestore update failed:', err.message);
       return res.status(500).send('Firestore error');
     }
   }
