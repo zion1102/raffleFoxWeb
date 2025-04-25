@@ -106,8 +106,6 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
 });
 
 const webhookApp = express();
-
-// 🔥 Correct raw body parser setup
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
 webhookApp.post('/', async (req, res) => {
@@ -134,7 +132,6 @@ webhookApp.post('/', async (req, res) => {
     }
 
     const coins = Math.floor(amount / 10);
-
     try {
       await db.collection('topups').add({
         userId,
@@ -158,5 +155,4 @@ webhookApp.post('/', async (req, res) => {
   res.status(200).send('Unhandled event type');
 });
 
-// ✅ FIXED: DO NOT use { raw: true } — this is correct for Gen 1
 exports.stripeWebhook = functions.https.onRequest(webhookApp);

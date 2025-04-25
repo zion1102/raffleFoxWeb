@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../config/firebaseConfig';
-import { getFirestore, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { auth, db } from '../config/firebaseConfig';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs
+} from 'firebase/firestore';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
 import axios from 'axios';
-
-// Firestore init
-import { initializeApp } from 'firebase/app';
-import firebaseConfig from '../config/firebaseConfig'; // Ensure this exports your config object
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 const packages = [10, 20, 50, 100];
 
@@ -65,7 +64,7 @@ const TopUpPage = () => {
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      const results = querySnapshot.docs.map(doc => {
+      const results = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
