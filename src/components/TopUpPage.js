@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../config/firebaseConfig';
+import { getFirestore, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
 import axios from 'axios';
+
+// Firestore init
+import { initializeApp } from 'firebase/app';
+import firebaseConfig from '../config/firebaseConfig'; // Ensure this exports your config object
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const packages = [10, 20, 50, 100];
 
@@ -21,7 +29,7 @@ const TopUpPage = () => {
       const amount = urlParams.get('amount');
       const userId = urlParams.get('userId');
       const token = urlParams.get('token');
-  
+
       if (token && userId && amount) {
         try {
           await auth.signInWithCustomToken(token);
@@ -30,43 +38,43 @@ const TopUpPage = () => {
             { amount: parseFloat(amount), userId },
             { headers: { 'Content-Type': 'application/json' } }
           );
-  
-          // Clean the URL
           window.history.replaceState(null, '', '/topup');
         } catch (err) {
           console.error('Top-up post-processing failed:', err);
         }
       }
-  
+
       if (currentUser) {
         setUser(currentUser);
         await fetchTopUps(currentUser.uid);
       } else {
         setUser(null);
       }
-  
+
       setLoading(false);
     });
-  
+
     return () => unsubscribe();
   }, []);
-  
 
   const fetchTopUps = async (userId) => {
     try {
-      const res = await fetch(
-        `https://firestore.googleapis.com/v1/projects/rafflefox-23872/databases/(default)/documents/topups?orderBy=createTime desc`
+      const q = query(
+        collection(db, 'topups'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
       );
-      const data = await res.json();
-      if (data.documents) {
-        const filtered = data.documents.filter(doc => doc.fields.userId?.stringValue === userId);
-        setTopups(filtered.map(doc => ({
-          id: doc.name.split('/').pop(),
-          amount: parseFloat(doc.fields.amount.integerValue || doc.fields.amount.doubleValue),
-          coins: doc.fields.coins?.integerValue || doc.fields.coins?.doubleValue || null,
-          timestamp: doc.createTime,
-        })));
-      }
+      const querySnapshot = await getDocs(q);
+      const results = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          amount: data.amount,
+          coins: data.coins,
+          timestamp: data.createdAt?.toDate?.() || new Date(),
+        };
+      });
+      setTopups(results);
     } catch (error) {
       console.error('Error fetching top-ups:', error);
     }
@@ -166,7 +174,7 @@ const TopUpPage = () => {
             <ul>
               {topups.map((topup) => (
                 <li key={topup.id}>
-                  {topup.amount} TTD → {topup.coins ?? topup.amount / 10} gold coins
+                  {topup.amount} TTD → {topup.coins} gold coins
                   <span className="timestamp">{new Date(topup.timestamp).toLocaleString()}</span>
                 </li>
               ))}
