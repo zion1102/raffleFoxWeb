@@ -1,18 +1,20 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const stripeLib = require('stripe');
 const express = require('express');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const stripeLib = require('stripe');
+require('dotenv').config();
 
-// 🔥 Initialize Firebase
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-// 🔐 Apple Sign-In Config
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || functions.config().stripe?.secret;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || functions.config().stripe?.webhook_secret;
+
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -36,7 +38,6 @@ function generateClientSecret() {
   });
 }
 
-// 🍎 Apple Sign-In Token Exchange
 exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -65,17 +66,17 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// 💳 Stripe Checkout Session
 exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).send('');
 
-  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY); // ✅ Move inside the function
+  const stripe = stripeLib(STRIPE_SECRET_KEY);
   const { amount, userId } = req.body;
 
   if (!amount || !userId) {
+    console.error('❌ Missing amount or userId');
     return res.status(400).json({ error: 'Amount and userId are required' });
   }
 
@@ -96,28 +97,29 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
       cancel_url: 'https://rafflefox.netlify.app/topup',
     });
 
+    console.log('✅ Stripe session created:', session.id);
     res.status(200).json({ url: session.url });
   } catch (error) {
-    console.error('Stripe session error:', error.message);
+    console.error('🔥 Stripe session creation failed:', error);
     res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
   }
 });
 
-// 🔁 Stripe Webhook
 const webhookApp = express();
+
+// 🔥 Correct raw body parser setup
 webhookApp.use(bodyParser.raw({ type: 'application/json' }));
 
 webhookApp.post('/', async (req, res) => {
-  const stripe = stripeLib(process.env.STRIPE_SECRET_KEY); // ✅ Move inside function
+  const stripe = stripeLib(STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    console.log('✅ Webhook verified');
+    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+    console.log('✅ Webhook verified:', event.id);
   } catch (err) {
-    console.error('⚠️ Webhook signature error:', err.message);
+    console.error('❌ Webhook verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -132,6 +134,7 @@ webhookApp.post('/', async (req, res) => {
     }
 
     const coins = Math.floor(amount / 10);
+
     try {
       await db.collection('topups').add({
         userId,
@@ -145,13 +148,15 @@ webhookApp.post('/', async (req, res) => {
       });
 
       console.log(`✅ ${coins} coins added to user ${userId}`);
+      return res.status(200).send('Success');
     } catch (err) {
       console.error('❌ Firestore update failed:', err.message);
       return res.status(500).send('Firestore error');
     }
   }
 
-  res.status(200).send('Webhook received');
+  res.status(200).send('Unhandled event type');
 });
 
+// ✅ FIXED: DO NOT use { raw: true } — this is correct for Gen 1
 exports.stripeWebhook = functions.https.onRequest(webhookApp);
