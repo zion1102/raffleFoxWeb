@@ -1,13 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../config/firebaseConfig';
-import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  increment,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { loadStripe } from '@stripe/stripe-js';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
+import axios from 'axios';
 
-const stripePromise = loadStripe('pk_test_51P6Z3iIL6zapKkuWeKALy7gmHd8wZdQvjZnGJLgA2jV1mYQoKoYMbRqUcEoT8VWAHhvToi73UzEXuqlzYP7HegW100mKY8zXtV'); // 🔥 Replace with your real Stripe public key
+const stripePromise = loadStripe('pk_test_51P6Z3iIL6zapKkuWeKALy7gmHd8wZdQvjZnGJLgA2jV1mYQoKoYMbRqUcEoT8VWAHhvToi73UzEXuqlzYP7HegW100mKY8zXtV');
 
-const packages = [10, 20, 50, 100];
+// 🔥 Predefined packages and their Stripe price IDs
+const packages = [
+  { amount: 10, priceId: 'prod_SCdmLAUSkHu2tX' },
+  { amount: 20, priceId: 'price_1P7xeGIL6zapKkuWsrfvQOoh' },
+  { amount: 50, priceId: 'price_1P7xeWIL6zapKkuWqMGpHz0l' },
+  { amount: 100, priceId: 'price_1P7xefIL6zapKkuWZDn8MNn7' },
+];
 
 const TopUpPage = () => {
   const [selectedAmount, setSelectedAmount] = useState(null);
@@ -16,7 +34,6 @@ const TopUpPage = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -29,7 +46,6 @@ const TopUpPage = () => {
 
         if (success && amount) {
           try {
-            // Record the top-up after successful payment
             await addDoc(collection(db, 'topups'), {
               userId: currentUser.uid,
               amount,
@@ -43,7 +59,6 @@ const TopUpPage = () => {
             });
 
             console.log('✅ Top-up and credits updated.');
-            // Clean up the URL to remove query params
             window.history.replaceState(null, '', '/topup');
           } catch (error) {
             console.error('❌ Error updating Firestore after payment:', error);
@@ -85,7 +100,9 @@ const TopUpPage = () => {
   };
 
   const handleTopUp = async () => {
+    const stripe = await stripePromise;
     const amountToTopUp = selectedAmount || parseFloat(customAmount);
+
     if (!amountToTopUp || isNaN(amountToTopUp) || amountToTopUp <= 0) {
       alert('Please select or enter a valid top-up amount.');
       return;
@@ -94,30 +111,29 @@ const TopUpPage = () => {
     setProcessing(true);
 
     try {
-      const stripe = await stripePromise;
+      if (selectedAmount) {
+        // 🧡 Predefined package flow (fixed price ID)
+        const selectedPackage = packages.find((p) => p.amount === selectedAmount);
+        if (!selectedPackage) throw new Error('Invalid package selected.');
 
-      const session = await stripe.redirectToCheckout({
-        lineItems: [{
-          price_data: {
-            currency: 'ttd',
-            product_data: { name: `${amountToTopUp} TTD Gold Coin Top-Up` },
-            unit_amount: amountToTopUp * 100,
-          },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        successUrl: `https://rafflefox.netlify.app/topup?success=true&amount=${amountToTopUp}`,
-        cancelUrl: `https://rafflefox.netlify.app/topup?canceled=true`,
-      });
+        await stripe.redirectToCheckout({
+          lineItems: [{ price: selectedPackage.priceId, quantity: 1 }],
+          mode: 'payment',
+          successUrl: `https://rafflefox.netlify.app/topup?success=true&amount=${selectedPackage.amount}`,
+          cancelUrl: `https://rafflefox.netlify.app/topup?canceled=true`,
+        });
+      } else {
+        // 💙 Custom amount flow (dynamic Stripe session)
+        const res = await axios.post('https://us-central1-rafflefox-23872.cloudfunctions.net/api/createCheckoutSession', {
+          amount: amountToTopUp,
+          userId: user.uid,
+        });
 
-      if (session.error) {
-        console.error('❌ Stripe Checkout session error:', session.error.message);
-        alert('Error redirecting to payment.');
-        setProcessing(false);
+        window.location.href = res.data.url;
       }
     } catch (error) {
-      console.error('❌ Stripe Checkout creation error:', error);
-      alert('Error creating Stripe session.');
+      console.error('❌ Stripe checkout error:', error);
+      alert('Error processing payment.');
       setProcessing(false);
     }
   };
@@ -136,14 +152,14 @@ const TopUpPage = () => {
           <div className="package-options">
             {packages.map((pkg) => (
               <button
-                key={pkg}
-                className={`package-button ${selectedAmount === pkg ? 'selected' : ''}`}
+                key={pkg.amount}
+                className={`package-button ${selectedAmount === pkg.amount ? 'selected' : ''}`}
                 onClick={() => {
-                  setSelectedAmount(pkg);
+                  setSelectedAmount(pkg.amount);
                   setCustomAmount('');
                 }}
               >
-                {pkg} TTD
+                {pkg.amount} TTD
               </button>
             ))}
           </div>
@@ -171,13 +187,6 @@ const TopUpPage = () => {
         >
           {processing ? 'Redirecting...' : 'Proceed to Payment'}
         </button>
-
-        {showSuccess && (
-          <div className="success-popup">
-            <div className="checkmark-circle">&#10003;</div>
-            <p>Redirecting to payment...</p>
-          </div>
-        )}
 
         <div className="previous-topups">
           <h3>Previous Top-Ups</h3>
