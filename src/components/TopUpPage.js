@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../config/firebaseConfig';
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs
-} from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, addDoc, doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { loadStripe } from '@stripe/stripe-js';
 import '../styles/TopUpPage.css';
 import TopNavBar from './TopNavBar';
-import axios from 'axios';
+
+const stripePromise = loadStripe('pk_test_51P6Z3iIL6zapKkuWeKALy7gmHd8wZdQvjZnGJLgA2jV1mYQoKoYMbRqUcEoT8VWAHhvToi73UzEXuqlzYP7HegW100mKY8zXtV'); // 🔥 Replace with your real Stripe public key
 
 const packages = [10, 20, 50, 100];
 
@@ -25,26 +21,35 @@ const TopUpPage = () => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       const urlParams = new URLSearchParams(window.location.search);
-      const amount = urlParams.get('amount');
-      const userId = urlParams.get('userId');
-      const token = urlParams.get('token');
-
-      if (token && userId && amount) {
-        try {
-          await auth.signInWithCustomToken(token);
-          await axios.post(
-            'https://us-central1-rafflefox-23872.cloudfunctions.net/api/topupSuccessHandler', // ✅ FIXED URL
-            { amount: parseFloat(amount), userId },
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-          window.history.replaceState(null, '', '/topup');
-        } catch (err) {
-          console.error('Top-up post-processing failed:', err);
-        }
-      }
+      const success = urlParams.get('success');
+      const amount = parseFloat(urlParams.get('amount'));
 
       if (currentUser) {
         setUser(currentUser);
+
+        if (success && amount) {
+          try {
+            // Record the top-up after successful payment
+            await addDoc(collection(db, 'topups'), {
+              userId: currentUser.uid,
+              amount,
+              coins: Math.floor(amount / 10),
+              createdAt: serverTimestamp(),
+            });
+
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, {
+              credits: increment(Math.floor(amount / 10)),
+            });
+
+            console.log('✅ Top-up and credits updated.');
+            // Clean up the URL to remove query params
+            window.history.replaceState(null, '', '/topup');
+          } catch (error) {
+            console.error('❌ Error updating Firestore after payment:', error);
+          }
+        }
+
         await fetchTopUps(currentUser.uid);
       } else {
         setUser(null);
@@ -75,7 +80,7 @@ const TopUpPage = () => {
       });
       setTopups(results);
     } catch (error) {
-      console.error('Error fetching top-ups:', error);
+      console.error('❌ Error fetching top-ups:', error);
     }
   };
 
@@ -87,24 +92,31 @@ const TopUpPage = () => {
     }
 
     setProcessing(true);
-    try {
-      const response = await axios.post(
-        'https://us-central1-rafflefox-23872.cloudfunctions.net/api/createCheckoutSession', // ✅ FIXED URL
-        { amount: amountToTopUp, userId: user.uid },
-        { headers: { 'Content-Type': 'application/json' } }
-      );
 
-      if (response.data.url) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          window.location.href = response.data.url;
-        }, 1000);
-      } else {
-        alert('Stripe session error.');
+    try {
+      const stripe = await stripePromise;
+
+      const session = await stripe.redirectToCheckout({
+        lineItems: [{
+          price_data: {
+            currency: 'ttd',
+            product_data: { name: `${amountToTopUp} TTD Gold Coin Top-Up` },
+            unit_amount: amountToTopUp * 100,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        successUrl: `https://rafflefox.netlify.app/topup?success=true&amount=${amountToTopUp}`,
+        cancelUrl: `https://rafflefox.netlify.app/topup?canceled=true`,
+      });
+
+      if (session.error) {
+        console.error('❌ Stripe Checkout session error:', session.error.message);
+        alert('Error redirecting to payment.');
         setProcessing(false);
       }
     } catch (error) {
-      console.error('Stripe error:', error);
+      console.error('❌ Stripe Checkout creation error:', error);
       alert('Error creating Stripe session.');
       setProcessing(false);
     }
