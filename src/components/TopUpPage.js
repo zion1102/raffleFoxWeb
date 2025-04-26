@@ -21,7 +21,7 @@ const stripePromise = loadStripe('pk_test_51P6Z3iIL6zapKkuWeKALy7gmHd8wZdQvjZnGJ
 
 // 🔥 Predefined packages and their Stripe price IDs
 const packages = [
-  { amount: 10, priceId: 'prod_SCdmLAUSkHu2tX' },
+  { amount: 10, priceId: 'price_1RIEV8IL6zapKkuWW7cUfEXi' },
   { amount: 20, priceId: 'price_1P7xeGIL6zapKkuWsrfvQOoh' },
   { amount: 50, priceId: 'price_1P7xeWIL6zapKkuWqMGpHz0l' },
   { amount: 100, priceId: 'price_1P7xefIL6zapKkuWZDn8MNn7' },
