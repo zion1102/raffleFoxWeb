@@ -5,16 +5,33 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const stripeLib = require('stripe');
-require('dotenv').config();
+require('dotenv').config(); // Enable .env support in local
 
+// Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || functions.config().stripe?.secret;
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || functions.config().stripe?.webhook_secret;
+// Stripe Initialization
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || functions.config().stripe.secret;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || functions.config().stripe.webhook_secret;
+const stripe = stripeLib(STRIPE_SECRET_KEY);
 
+// Express app
+const app = express();
+
+// Middleware - Custom parsing
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/stripeWebhook') {
+    // Do not parse body for Stripe webhook (must stay raw)
+    next();
+  } else {
+    bodyParser.json()(req, res, next);
+  }
+});
+
+// ---- Apple Sign-In Variables ----
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -25,25 +42,28 @@ t6MaKwNMCWnsgSmiwm3SOKbtxWGpxX8cPGpMp1u6AF0REic88WtDZb3aaCpxR7QJ
 zQvX5W1k
 -----END PRIVATE KEY-----`;
 
+// Function to generate Apple Client Secret
 function generateClientSecret() {
-  return jwt.sign({
-    iss: TEAM_ID,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 15777000,
-    aud: 'https://appleid.apple.com',
-    sub: CLIENT_ID,
-  }, privateKey, {
-    algorithm: 'ES256',
-    keyid: KEY_ID,
-  });
+  return jwt.sign(
+    {
+      iss: TEAM_ID,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 15777000, // ~6 months
+      aud: 'https://appleid.apple.com',
+      sub: CLIENT_ID,
+    },
+    privateKey,
+    {
+      algorithm: 'ES256',
+      keyid: KEY_ID,
+    }
+  );
 }
 
-exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-  res.set('Access-Control-Allow-Methods', 'POST');
-  if (req.method === 'OPTIONS') return res.status(204).send();
+// ---- API Routes ----
 
+// 🍎 Apple Sign-In Token Exchange
+app.post('/api/exchangeAppleToken', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Authorization code is required' });
 
@@ -66,13 +86,8 @@ exports.exchangeAppleToken = functions.https.onRequest(async (req, res) => {
   }
 });
 
-exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(204).send('');
-
-  const stripe = stripeLib(STRIPE_SECRET_KEY);
+// 💳 Stripe Checkout Session Creation
+app.post('/api/createCheckoutSession', async (req, res) => {
   const { amount, userId } = req.body;
 
   if (!amount || !userId) {
@@ -100,16 +115,13 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
     console.log('✅ Stripe session created:', session.id);
     res.status(200).json({ url: session.url });
   } catch (error) {
-    console.error('🔥 Stripe session creation failed:', error);
+    console.error('🔥 Stripe session creation failed:', error.message);
     res.status(500).json({ error: 'Failed to create Stripe Checkout Session' });
   }
 });
 
-const webhookApp = express();
-webhookApp.use(bodyParser.raw({ type: 'application/json' }));
-
-webhookApp.post('/', async (req, res) => {
-  const stripe = stripeLib(STRIPE_SECRET_KEY);
+// 🔥 Stripe Webhook Handler (raw body only)
+app.post('/api/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
 
   let event;
@@ -132,6 +144,7 @@ webhookApp.post('/', async (req, res) => {
     }
 
     const coins = Math.floor(amount / 10);
+
     try {
       await db.collection('topups').add({
         userId,
@@ -155,4 +168,5 @@ webhookApp.post('/', async (req, res) => {
   res.status(200).send('Unhandled event type');
 });
 
-exports.stripeWebhook = functions.https.onRequest(webhookApp);
+// 🚀 Deploy the Express app
+exports.api = functions.https.onRequest(app);

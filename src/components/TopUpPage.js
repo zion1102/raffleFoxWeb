@@ -33,7 +33,7 @@ const TopUpPage = () => {
         try {
           await auth.signInWithCustomToken(token);
           await axios.post(
-            'https://us-central1-rafflefox-23872.cloudfunctions.net/topupSuccessHandler',
+            'https://us-central1-rafflefox-23872.cloudfunctions.net/api/topupSuccessHandler', // ✅ FIXED URL
             { amount: parseFloat(amount), userId },
             { headers: { 'Content-Type': 'application/json' } }
           );
@@ -89,7 +89,7 @@ const TopUpPage = () => {
     setProcessing(true);
     try {
       const response = await axios.post(
-        'https://us-central1-rafflefox-23872.cloudfunctions.net/createCheckoutSession',
+        'https://us-central1-rafflefox-23872.cloudfunctions.net/api/createCheckoutSession', // ✅ FIXED URL
         { amount: amountToTopUp, userId: user.uid },
         { headers: { 'Content-Type': 'application/json' } }
       );
