@@ -13,6 +13,9 @@ import EmailPasswordUpdate from "./components/EmailPasswordUpdate";
 import AuthCallback from './components/AuthCallback';
 import HomeScreen from './components/HomeScreen';
 import TopUpSuccess from './components/TopUpSuccess';
+import RaffleDetail from './components/RaffleDetails';
+import GameScreen from './components/GameScreen'; 
+import CartScreen from './components/CartScreen';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -41,6 +44,9 @@ function App() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/topup-success" element={<TopUpSuccess />} />
         <Route path="/home" element={<HomeScreen />} />
+        <Route path="/raffle/:id" element={<RaffleDetail />} />
+        <Route path="/game/:id" element={<GameScreen />} /> {/* ✅ NEW ROUTE */}
+        <Route path="/cart" element={<CartScreen />} />
       </Routes>
     </Router>
   );

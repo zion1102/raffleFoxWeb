@@ -1,195 +1,202 @@
-/* eslint-disable no-unused-vars */
-
-
 import React, { useEffect, useState } from 'react';
-import { db, auth } from '../config/firebaseConfig'; // Firebase config
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import TopNavBar from './TopNavBar';
+import { useNavigate } from 'react-router-dom';
 import '../styles/HomeScreen.css';
 
 const HomeScreen = () => {
   const [latestRaffles, setLatestRaffles] = useState([]);
-  const [likedRaffles, setLikedRaffles] = useState([]);
   const [popularRaffles, setPopularRaffles] = useState([]);
   const [endingSoon, setEndingSoon] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [timeLeft, setTimeLeft] = useState({});
+  const [stickyRaffle, setStickyRaffle] = useState(null);
+  const [visibleLatestCount, setVisibleLatestCount] = useState(4);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchRaffles = async () => {
-      try {
-        setLoading(true);
-        const now = new Date();
-        const next7Days = new Date();
-        next7Days.setDate(next7Days.getDate() + 7); // Calculate date 7 days ahead
-
-        // Fetch latest raffles
-        const latestQuery = query(
-          collection(db, 'raffles'),
-          where('expiryDate', '>=', now),
-          orderBy('expiryDate', 'asc'),
-          limit(5)
-        );
-        const latestSnapshot = await getDocs(latestQuery);
-        const latestData = latestSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          expiryDate: doc.data().expiryDate.toDate(),
-        }));
-        setLatestRaffles(latestData);
-        console.log('Latest Raffles:', latestData);
-
-        // Check if user is logged in
-        const currentUser = auth.currentUser;
-        setUser(currentUser);
-
-        if (currentUser) {
-          // Fetch liked raffles
-          const likedQuery = query(
-            collection(db, 'userLikes'),
-            where('userId', '==', currentUser.uid),
-            limit(5)
-          );
-          const likedSnapshot = await getDocs(likedQuery);
-          const likedRaffleIds = likedSnapshot.docs.map(doc => doc.data().raffleId);
-
-          // Fetch details for liked raffles
-          if (likedRaffleIds.length > 0) {
-            const likedRafflesQuery = query(
-              collection(db, 'raffles'),
-              where('raffleId', 'in', likedRaffleIds)
-            );
-            const likedRafflesSnapshot = await getDocs(likedRafflesQuery);
-            const likedRafflesData = likedRafflesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              expiryDate: doc.data().expiryDate.toDate(),
-            }));
-            setLikedRaffles(likedRafflesData);
-            console.log('Liked Raffles:', likedRafflesData);
-          }
-        }
-
-        // Fetch most popular raffles based on userLikes
-        const likesSnapshot = await getDocs(collection(db, 'userLikes'));
-        const likeCounts = {};
-        likesSnapshot.docs.forEach(doc => {
-          const raffleId = doc.data().raffleId;
-          likeCounts[raffleId] = (likeCounts[raffleId] || 0) + 1;
-        });
-
-        // Fetch details for the top liked raffles
-        const mostLikedRaffleIds = Object.keys(likeCounts)
-          .sort((a, b) => likeCounts[b] - likeCounts[a])
-          .slice(0, 5);
-
-        if (mostLikedRaffleIds.length > 0) {
-          const mostLikedQuery = query(
-            collection(db, 'raffles'),
-            where('raffleId', 'in', mostLikedRaffleIds)
-          );
-          const mostLikedSnapshot = await getDocs(mostLikedQuery);
-          const mostLikedData = mostLikedSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            expiryDate: doc.data().expiryDate.toDate(),
-            likes: likeCounts[doc.id] || 0,
-          }));
-          setPopularRaffles(mostLikedData);
-          console.log('Most Liked Raffles:', mostLikedData);
-        }
-
-        // Fetch raffles ending soon (expiryDate within the next 7 days)
-        const endingSoonQuery = query(
-          collection(db, 'raffles'),
-          where('expiryDate', '>=', now),
-          where('expiryDate', '<=', next7Days),
-          orderBy('expiryDate', 'asc'),
-          limit(5)
-        );
-        const endingSoonSnapshot = await getDocs(endingSoonQuery);
-        const endingSoonData = endingSoonSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          expiryDate: doc.data().expiryDate.toDate(),
-        }));
-        setEndingSoon(endingSoonData);
-        console.log('Ending Soon Raffles:', endingSoonData);
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching raffles:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchRaffles();
+    fetchLatestRaffles();
+    fetchPopularRaffles();
+    fetchEndingSoonRaffles();
   }, []);
 
-  // ⏳ Live Countdown Timer Effect
+  const fetchLatestRaffles = async () => {
+    try {
+      const now = new Date();
+      const latestQuery = query(
+        collection(db, 'raffles'),
+        where('expiryDate', '>=', now),
+        orderBy('expiryDate', 'asc')
+      );
+      const snapshot = await getDocs(latestQuery);
+      const raffles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        expiryDate: doc.data().expiryDate?.toDate() || null,
+      }));
+      setLatestRaffles(raffles);
+      if (raffles.length > 0) {
+        setStickyRaffle(raffles[Math.floor(Math.random() * raffles.length)]);
+      }
+    } catch (error) {
+      console.error('Error fetching latest raffles:', error);
+    }
+  };
+
+  const fetchPopularRaffles = async () => {
+    try {
+      const popularQuery = query(
+        collection(db, 'raffles'),
+        orderBy('popularity', 'desc')
+      );
+      const snapshot = await getDocs(popularQuery);
+      const raffles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        expiryDate: doc.data().expiryDate?.toDate() || null,
+      }));
+      setPopularRaffles(raffles);
+    } catch (error) {
+      console.error('Error fetching popular raffles:', error);
+    }
+  };
+
+  const fetchEndingSoonRaffles = async () => {
+    try {
+      const now = new Date();
+      const next7Days = new Date();
+      next7Days.setDate(now.getDate() + 7);
+
+      const endingSoonQuery = query(
+        collection(db, 'raffles'),
+        where('expiryDate', '>=', now),
+        where('expiryDate', '<=', next7Days),
+        orderBy('expiryDate', 'asc')
+      );
+      const snapshot = await getDocs(endingSoonQuery);
+      const raffles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        expiryDate: doc.data().expiryDate?.toDate() || null,
+      }));
+      setEndingSoon(raffles);
+    } catch (error) {
+      console.error('Error fetching ending soon raffles:', error);
+    }
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft(prevTime => {
-        const updatedTime = {};
-        [...latestRaffles, ...popularRaffles, ...endingSoon, ...likedRaffles].forEach(raffle => {
-          const difference = raffle.expiryDate - new Date();
-          if (difference > 0) {
-            updatedTime[raffle.id] = {
-              days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-              hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-              minutes: Math.floor((difference / (1000 * 60)) % 60),
-              seconds: Math.floor((difference / 1000) % 60),
-            };
-          } else {
-            updatedTime[raffle.id] = 'Expired';
-          }
-        });
-        return updatedTime;
+    const handleScroll = () => {
+      const sections = document.querySelectorAll('.fade-in');
+      sections.forEach(section => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= window.innerHeight * 0.85) {
+          section.classList.add('visible');
+        }
       });
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
-  }, [latestRaffles, popularRaffles, endingSoon, likedRaffles]);
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const handleCardClick = (raffleId) => {
+    navigate(`/raffle/${raffleId}`);
+  };
+
+  const handleLoadMore = () => {
+    setVisibleLatestCount(prev => prev + 4);
+  };
+
+  const handleCollapse = () => {
+    setVisibleLatestCount(4);
+  };
 
   return (
-    <div>
+    <div className="page-background">
       <TopNavBar />
-      <div className="home-container">
-        <h1>Welcome to RaffleFox</h1>
-        <p>Discover exciting raffles and games!</p>
+      <div className="confetti-background" />
 
-        {[{ title: 'Latest Raffles', data: latestRaffles },
-          { title: 'Most Popular Raffles', data: popularRaffles },
-          { title: 'Ending Soon', data: endingSoon }].map(({ title, data }) => (
-          <div className="raffle-section" key={title}>
-            <h2>{title}</h2>
-            <div className="raffle-list">
-              {data.length > 0 ? (
-                data.map(raffle => (
-                  <div className="raffle-card" key={raffle.id}>
-                    <img src={raffle.picture || 'https://via.placeholder.com/150'} alt={raffle.title} className="raffle-image" />
-                    <h3>{raffle.title}</h3>
-                    <p>{raffle.description}</p>
-                    <p><strong>Price to Play:</strong> ${raffle.costPer}</p>
-                    <p><strong>Time Left:</strong> 
-                      {timeLeft[raffle.id] !== 'Expired' ? (
-                        `${timeLeft[raffle.id]?.days}d ${timeLeft[raffle.id]?.hours}h ${timeLeft[raffle.id]?.minutes}m ${timeLeft[raffle.id]?.seconds}s`
-                      ) : 'Expired'}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="no-raffles">No raffles right now, check again later!</p>
-              )}
-            </div>
+      <section className="hero-section">
+        <div className="hero-content">
+          <h1>Win Dream Prizes with <span className="highlight">RaffleFox</span>!</h1>
+          <p>Enter raffles, win big — it's that simple.</p>
+          
+        </div>
+      </section>
+
+      {latestRaffles.length > 0 && (
+        <section className="featured-raffles fade-in">
+          <h2>🚀 Featured Raffles</h2>
+          <div className="raffle-grid">
+            {latestRaffles.slice(0, visibleLatestCount).map(raffle => (
+              <div className="raffle-card tilt" key={raffle.id} onClick={() => handleCardClick(raffle.id)}>
+                <img src={raffle.picture || 'https://via.placeholder.com/300'} alt={raffle.title} />
+                <div className="raffle-info">
+                  <h3>{raffle.title}</h3>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            {visibleLatestCount < latestRaffles.length && (
+              <button className="cta-button" onClick={handleLoadMore}>Load More</button>
+            )}
+            {visibleLatestCount > 4 && (
+              <button className="cta-button" style={{ marginLeft: '10px', backgroundColor: '#999' }} onClick={handleCollapse}>
+                Collapse
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {popularRaffles.length > 0 && (
+        <section className="popular-raffles fade-in">
+          <h2>🔥 Most Popular</h2>
+          <div className="raffle-grid">
+            {popularRaffles.map(raffle => (
+              <div className="raffle-card tilt" key={raffle.id} onClick={() => handleCardClick(raffle.id)}>
+                <img src={raffle.picture || 'https://via.placeholder.com/300'} alt={raffle.title} />
+                <div className="raffle-info">
+                  <h3>{raffle.title}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {endingSoon.length > 0 && (
+        <section className="ending-soon fade-in">
+          <h2>⏳ Ending Soon</h2>
+          <div className="raffle-grid">
+            {endingSoon.map(raffle => (
+              <div className="raffle-card tilt" key={raffle.id} onClick={() => handleCardClick(raffle.id)}>
+                <img src={raffle.picture || 'https://via.placeholder.com/300'} alt={raffle.title} />
+                <div className="raffle-info">
+                  <h3>{raffle.title}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <footer className="footer-cta">
+        <h2>Ready to Win?</h2>
+        
+      </footer>
+
+      {stickyRaffle && (
+        <div className="sticky-featured bounce-in" onClick={() => handleCardClick(stickyRaffle.id)}>
+          <img src={stickyRaffle.picture || 'https://via.placeholder.com/150'} alt={stickyRaffle.title} />
+          <div className="sticky-content">
+            <h4>{stickyRaffle.title}</h4>
+            <button className="small-cta">Play</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const stripeLib = require('stripe');
 require('dotenv').config(); // Local environment support
+const cors = require('cors'); 
 
 // --- Initialize Firebase Admin SDK ---
 if (!admin.apps.length) {
@@ -20,6 +21,7 @@ const stripe = stripeLib(STRIPE_SECRET_KEY);
 
 // --- Setup Express app ---
 const app = express();
+app.use(cors({ origin: true }));
 
 // --- Raw body ONLY for Stripe Webhook ---
 app.use((req, res, next) => {
@@ -57,7 +59,7 @@ function generateClientSecret() {
 // --- Routes ---
 
 // 🍎 Exchange Apple Token (Optional)
-app.post('/api/exchangeAppleToken', async (req, res) => {
+app.post('/exchangeAppleToken', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Authorization code is required' });
 
@@ -81,7 +83,7 @@ app.post('/api/exchangeAppleToken', async (req, res) => {
 });
 
 // 💳 Create Stripe Checkout Session for Custom Amounts
-app.post('/api/createCheckoutSession', async (req, res) => {
+app.post('/createCheckoutSession', async (req, res) => {
   const { amount, userId } = req.body;
   if (!amount || !userId) return res.status(400).json({ error: 'Amount and userId are required' });
 
@@ -111,7 +113,7 @@ app.post('/api/createCheckoutSession', async (req, res) => {
 });
 
 // 🚀 Stripe Webhook to confirm payment success
-app.post('/api/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
+app.post('/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
 

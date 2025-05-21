@@ -1,29 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../config/firebaseConfig'; // Import Firebase auth
+import { auth } from '../config/firebaseConfig';
+import { FiHome, FiUser, FiLogOut, FiCreditCard, FiShoppingCart } from 'react-icons/fi';
 import '../styles/TopNavBar.css';
 
 const TopNavBar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // State to track login status
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up a listener to check if the user is logged in
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-      }
+      setIsLoggedIn(!!user);
     });
-
-    return () => unsubscribe(); // Clean up the listener when the component unmounts
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
     try {
-      await auth.signOut(); // Firebase sign-out function
-      navigate('/login'); // Redirect to login page after logging out
+      await auth.signOut();
+      navigate('/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -32,22 +27,17 @@ const TopNavBar = () => {
   return (
     <nav className="navbar">
       <div className="navbar-logo">
-        {/* Conditionally navigate to /home if logged in, otherwise to / */}
-        <Link to={isLoggedIn ? "/home" : "/"}>RaffleFox</Link>
+        <Link to={isLoggedIn ? '/home' : '/'}>RaffleFox</Link>
       </div>
-      
+
       <div className="navbar-links">
-        {isLoggedIn ? (
+        {isLoggedIn && (
           <>
-            <Link to="/home">Home</Link>
-            <Link to="/topup">Top Up</Link>
-            <Link to="/profile">Profile</Link>
-            <button onClick={handleLogout} className="logout-button">Log Out</button>
-          </>
-        ) : (
-          <>
-            <Link to="/login">Log In</Link>
-            <Link to="/register">Register</Link>
+            <Link to="/home" title="Home"><FiHome /></Link>
+            <Link to="/topup" title="Top Up"><FiCreditCard /></Link>
+            <Link to="/cart" title="Cart"><FiShoppingCart /></Link>
+            <Link to="/profile" title="Profile"><FiUser /></Link>
+            <button onClick={handleLogout} className="logout-button" title="Log Out"><FiLogOut /></button>
           </>
         )}
       </div>

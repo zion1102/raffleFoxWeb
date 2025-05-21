@@ -1,0 +1,334 @@
+/* General Reset */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: #fcfcfc;
+  color: #222;
+  
+}
+
+/* Page Wrapper */
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Layout */
+.game-layout {
+  display: flex;
+  justify-content: center;
+  padding: 60px 40px;
+  gap: 40px;
+}
+
+.sidebar {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Raffle Cards */
+.ad-card {
+  background: #fff;
+  border: 1px solid #f15b29;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.ad-card:hover {
+  transform: translateY(-5px);
+}
+
+.ad-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.ad-content {
+  padding: 16px;
+  text-align: center;
+}
+
+.ad-timer {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f15b29;
+  background: #fff5f0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 10px;
+  border: 1px solid #f15b29;
+}
+
+.ad-title {
+  font-weight: 600;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.ad-button {
+  background: #f15b29;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(241, 91, 41, 0.2);
+}
+
+.ad-button:hover {
+  background: #d9480f;
+}
+
+/* Main Game Area */
+.game-screen {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 50px;
+  max-width: 740px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.raffle-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #f15b29;
+  margin-bottom: 16px;
+}
+
+.game-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  font-size: 17px;
+  margin-bottom: 28px;
+  color: #222;
+}
+
+.game-meta div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coin-icon {
+  height: 22px;
+}
+
+/* How To Play Box */
+.instructions {
+  background: #fff4eb;
+  border-left: 5px solid #f15b29;
+  border-radius: 12px;
+  padding: 16px 24px;
+  text-align: left;
+  margin-bottom: 28px;
+}
+
+.instructions h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f15b29;
+  margin-bottom: 8px;
+}
+
+.instructions ul {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.instructions li {
+  font-size: 14.5px;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+/* Image and Click Area */
+.image-wrapper {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  cursor: crosshair;
+}
+
+.image-wrapper img {
+  width: 100%;
+  display: block;
+}
+
+.target-dot,
+.confirmed-dot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.target-dot {
+  background-color: rgba(241, 91, 41, 0.8);
+  border: 2px dashed #fff;
+}
+
+.confirmed-dot {
+  background-color: #f15b29;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+/* Coordinates */
+.live-coords {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.controls button {
+  background: #f15b29;
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(241, 91, 41, 0.3);
+  transition: background 0.2s ease;
+}
+
+.controls button:hover {
+  background: #d9480f;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(30, 30, 30, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background: #fff;
+  padding: 30px 26px;
+  border-radius: 16px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.modal h3 {
+  font-size: 20px;
+  color: #f15b29;
+  margin-bottom: 12px;
+}
+
+.modal p {
+  font-size: 14.5px;
+  color: #444;
+  margin: 8px 0;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.modal-buttons button {
+  background: #f15b29;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-buttons button:hover {
+  background: #d9480f;
+}
+
+/* Success Overlay */
+.success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-animation {
+  font-size: 50px;
+}
+
+.success-message {
+  font-size: 18px;
+  color: #f15b29;
+  margin-top: 12px;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .controls {
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px;
+  }
+
+  .controls button {
+    width: 100%;
+    max-width: 260px;
+  }
+}
