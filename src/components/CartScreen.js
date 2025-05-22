@@ -17,7 +17,7 @@ const CartScreen = () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const cartQuery = query(collection(db, 'cart_guesses'), where('userId', '==', user.uid));
+      const cartQuery = query(collection(db, 'cart'), where('userId', '==', user.uid));
       const snapshot = await getDocs(cartQuery);
 
       const guesses = [];
