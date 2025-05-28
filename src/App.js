@@ -14,12 +14,19 @@ import AuthCallback from './components/AuthCallback';
 import HomeScreen from './components/HomeScreen';
 import TopUpSuccess from './components/TopUpSuccess';
 import RaffleDetail from './components/RaffleDetails';
-import GameScreen from './components/GameScreen'; 
+import GameScreen from './components/GameScreen';
 import CartScreen from './components/CartScreen';
+import AgeVerificationModal from './components/AgeVerificationModal';
+import ProtectedRoute from './components/ProtectedRoute';
+import EditProfilePage from './components/EditProfilePage';
+import GuessDetailsPage from './components/GuessDetailsPage';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ageVerified, setAgeVerified] = useState(
+    sessionStorage.getItem('ageVerified') === 'true'
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -30,7 +37,13 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  const handleAgeConfirm = () => {
+    sessionStorage.setItem('ageVerified', 'true');
+    setAgeVerified(true);
+  };
+
   if (loading) return <div>Loading...</div>;
+  if (!ageVerified) return <AgeVerificationModal onConfirm={handleAgeConfirm} />;
 
   return (
     <Router>
@@ -38,15 +51,59 @@ function App() {
         <Route path="/" element={user ? <HomeScreen /> : <LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/topup" element={<TopUpCreditsPage />} />
-        <Route path="/profile" element={<ProfileScreen />} />
-        <Route path="/update-account" element={<EmailPasswordUpdate />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/topup-success" element={<TopUpSuccess />} />
-        <Route path="/home" element={<HomeScreen />} />
-        <Route path="/raffle/:id" element={<RaffleDetail />} />
-        <Route path="/game/:id" element={<GameScreen />} /> {/* ✅ NEW ROUTE */}
-        <Route path="/cart" element={<CartScreen />} />
+        
+        <Route
+  path="/topup-success"
+  element={
+    <ProtectedRoute user={user}>
+      <TopUpSuccess />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/raffle/:id"
+  element={
+    <ProtectedRoute user={user}>
+      <RaffleDetail />
+    </ProtectedRoute>
+  }
+/>
+
+        
+        {/* PROTECTED ROUTES */}
+        <Route
+          path="/profile"
+          element={<ProtectedRoute user={user}><ProfileScreen /></ProtectedRoute>}
+        />
+        <Route
+  path="/edit-profile"
+  element={<ProtectedRoute user={user}><EditProfilePage /></ProtectedRoute>}
+/>
+<Route
+  path="/raffle/:raffleId/guesses"
+  element={<ProtectedRoute user={user}><GuessDetailsPage /></ProtectedRoute>}
+/>
+        <Route
+          path="/update-account"
+          element={<ProtectedRoute user={user}><EmailPasswordUpdate /></ProtectedRoute>}
+        />
+        <Route
+          path="/topup"
+          element={<ProtectedRoute user={user}><TopUpCreditsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/home"
+          element={<ProtectedRoute user={user}><HomeScreen /></ProtectedRoute>}
+        />
+        <Route
+          path="/game/:id"
+          element={<ProtectedRoute user={user}><GameScreen /></ProtectedRoute>}
+        />
+        <Route
+          path="/cart"
+          element={<ProtectedRoute user={user}><CartScreen /></ProtectedRoute>}
+        />
       </Routes>
     </Router>
   );

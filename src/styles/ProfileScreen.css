@@ -1,13 +1,15 @@
+/* === 🧾 Profile Container === */
 .profile-container {
   max-width: 800px;
   margin: 40px auto;
   padding: 20px;
   background-color: #fff5f0;
   border-radius: 10px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
+/* === 👤 Header === */
 .profile-header {
   margin-bottom: 40px;
 }
@@ -20,6 +22,7 @@
   margin-bottom: 20px;
 }
 
+/* === ⚙️ Buttons === */
 .profile-buttons {
   display: flex;
   justify-content: center;
@@ -40,6 +43,7 @@
   background-color: #d9480f;
 }
 
+/* === 📄 Account Details === */
 .profile-details {
   text-align: left;
 }
@@ -54,7 +58,7 @@
   background-color: white;
   padding: 20px;
   border-radius: 10px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .profile-item {
@@ -68,44 +72,102 @@
   color: #f15b29;
 }
 
+/* === 🎟 Ticket Section === */
 .profile-tickets {
   margin-top: 40px;
   text-align: left;
 }
 
-.ticket-group {
-  margin-bottom: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+/* === 🎫 Responsive Raffle Ticket SVG Layout === */
+.raffle-ticket-svg-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  aspect-ratio: 7 / 3;
+  margin: 24px auto;
 }
 
-.group-header {
+.raffle-ticket-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.raffle-ticket-content-inside {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: sans-serif;
+}
+
+/* === Ticket Text Elements === */
+.raffle-ticket-id {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff5f00;
+  z-index: 3;
+}
+
+.raffle-ticket-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #000;
+  margin-top: 6px;
+  z-index: 3;
+}
+
+.raffle-ticket-date {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background-color: #fff4e6;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  z-index: 3;
+}
+
+/* === Divider Line === */
+.raffle-ticket-divider {
+  width: 100%;
+  border-top: 2px dashed #ff5f00;
+  margin: 12px 0;
+  z-index: 3;
+}
+
+/* === Bottom Ticket Info === */
+.raffle-ticket-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  background: #f15b29;
+  align-items: flex-end;
+  font-size: 14px;
+  color: #333;
+  z-index: 3;
+}
+
+.raffle-ticket-button {
+  background-color: #ff5f00;
   color: white;
-  padding: 12px 18px;
-  border-radius: 10px 10px 0 0;
+  padding: 8px 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.group-entries {
-  padding: 12px 18px;
-  background: #fff;
+.raffle-ticket-button:hover {
+  background-color: #e45200;
 }
 
-.ticket-card {
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
-}
-
-.ticket-card:last-child {
-  border-bottom: none;
-}
-
-/* Mobile responsiveness */
+/* === 📱 Responsive Adjustments === */
 @media (max-width: 768px) {
   .profile-container {
     padding: 15px;
@@ -119,7 +181,18 @@
     font-size: 16px;
   }
 
-  .ticket-card {
-    font-size: 15px;
+  .raffle-ticket-content-inside {
+    padding: 20px;
+  }
+
+  .raffle-ticket-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .raffle-ticket-button {
+    width: 100%;
+    margin-top: 10px;
   }
 }

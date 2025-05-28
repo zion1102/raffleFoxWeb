@@ -1,0 +1,195 @@
+/* === 🎯 Guess Details Page Styling === */
+.guess-wrapper.guess-details-page {
+  background-color: #fff8f3;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+/* === 🎁 Container === */
+.guess-details-page .guess-container {
+  max-width: 780px;
+  margin: 40px auto;
+  padding: 36px;
+  background-color: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  animation: fadeSlideUp 0.6s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === 🧠 Heading === */
+.guess-details-page .guess-container h2 {
+  font-size: 26px;
+  color: #ff5f00;
+  margin-bottom: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* === 🏷 Header Info Row === */
+.guess-details-page .ticket-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  color: #555;
+  margin-bottom: 14px;
+}
+
+.guess-details-page .ticket-dashed {
+  width: 100%;
+  border-top: 2px dashed #ff5f00;
+  margin-bottom: 28px;
+}
+
+/* === 🎫 Guess Entry Card === */
+.guess-details-page .guess-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 36px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #eee;
+  background-color: #fffefc;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  margin-bottom: 20px;
+}
+
+.guess-details-page .guess-entry:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* === 🖼 Guess Image === */
+.guess-details-page .guess-image-wrapper {
+  position: relative;
+  width: 320px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  background: #f8f8f8;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: stretch;
+}
+
+.guess-details-page .guess-image-wrapper img {
+  width: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* === 🔴 Red Pulse Dot === */
+.guess-details-page .guess-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background-color: #ff3c3c;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: none;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.75; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* === 🧾 Guess Details === */
+.guess-details-page .guess-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  font-size: 16px;
+  color: #333;
+  flex: 1;
+}
+
+.guess-details-page .guess-details div {
+  background: #fdfdfd;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: background 0.3s ease;
+}
+
+.guess-details-page .guess-details div:hover {
+  background-color: #fff6f1;
+}
+
+.guess-details-page .guess-details strong {
+  color: #000;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* === 🔙 Back Button === */
+.guess-details-page .back-button {
+  display: inline-block;
+  margin-top: 24px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #ff5f00;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.guess-details-page .back-button:hover {
+  text-decoration: underline;
+  transform: translateX(-3px);
+}
+
+/* === 🌀 States === */
+.guess-details-page .guess-loading,
+.guess-details-page .empty-guess {
+  text-align: center;
+  font-size: 16px;
+  color: #999;
+  padding: 40px;
+}
+
+/* === 📱 Mobile Responsive === */
+@media (max-width: 700px) {
+  .guess-details-page .guess-container {
+    padding: 24px 18px;
+  }
+
+  .guess-details-page .guess-entry {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .guess-details-page .guess-image-wrapper {
+    width: 100%;
+  }
+
+  .guess-details-page .guess-details {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+
+  .guess-details-page .ticket-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+}

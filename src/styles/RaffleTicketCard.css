@@ -1,0 +1,167 @@
+.raffle-ticket-card {
+    position: relative;
+    border: 2px solid transparent; /* Remove default border */
+    border-radius: 20px;
+    margin: 24px 0;
+    padding: 24px;
+    padding-bottom: 28px;
+    background-color: white;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    z-index: 1;
+  }
+  
+  /* 🟠 Orange border mask layer */
+  .raffle-ticket-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid #ff5f00;
+    border-radius: 20px;
+    z-index: -1;
+    pointer-events: none;
+  }
+  
+  /* 🎟️ Circular side notches that mask the card border */
+  .raffle-ticket-card::after,
+  .raffle-ticket-card::before:not(:first-child) {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    background-color: white;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    box-shadow: 0 0 0 2px white;
+  }
+  
+  .raffle-ticket-card::after {
+    right: -20px;
+  }
+  
+  .raffle-ticket-card::before:not(:first-child) {
+    left: -20px;
+  }
+  
+  /* When expired, adjust cutouts and border */
+  .raffle-ticket-card.expired::before {
+    border-color: #c8c8c8;
+  }
+  
+  .raffle-ticket-card.expired::after,
+  .raffle-ticket-card.expired::before:not(:first-child) {
+    background-color: #f2f2f2;
+    box-shadow: 0 0 0 2px #f2f2f2;
+  }
+  
+  /* 📏 Dashed Divider */
+  .raffle-ticket-divider {
+    width: calc(100% - 80px);
+    margin: 16px auto;
+    height: 2px;
+    background-image: repeating-linear-gradient(
+      to right,
+      #ff5f00 0px,
+      #ff5f00 24px,
+      transparent 24px,
+      transparent 60px
+    );
+  }
+  
+  .raffle-ticket-card.expired .raffle-ticket-divider {
+    background-image: repeating-linear-gradient(
+      to right,
+      #c8c8c8 0px,
+      #c8c8c8 24px,
+      transparent 24px,
+      transparent 60px
+    );
+  }
+  
+  /* 🔢 Raffle Info */
+  .raffle-ticket-id {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ff5f00;
+    margin-bottom: 4px;
+  }
+  
+  .raffle-ticket-card.expired .raffle-ticket-id {
+    color: #c8c8c8;
+  }
+  
+  .raffle-ticket-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 8px;
+    max-width: 90%;
+  }
+  
+  .raffle-ticket-date {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background-color: #fff4e6;
+    padding: 4px 8px;
+    font-size: 13px;
+    border-radius: 5px;
+  }
+  
+  .raffle-ticket-card.expired .raffle-ticket-date {
+    background-color: #ffd7d7;
+  }
+  
+  /* 🎫 Ticket Row */
+  .raffle-ticket-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+    padding-top: 8px;
+  }
+  
+  .raffle-ticket-button {
+    background-color: #ff5f00;
+    color: white;
+    padding: 10px 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .raffle-ticket-button:hover {
+    background-color: #e45200;
+  }
+  
+  .raffle-ticket-card.expired .raffle-ticket-button {
+    background-color: #c8c8c8;
+    cursor: not-allowed;
+  }
+  
+  /* 📱 Responsive */
+  @media (max-width: 768px) {
+    .raffle-ticket-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+  
+    .raffle-ticket-button {
+      width: 100%;
+      margin-top: 10px;
+    }
+  }
+  

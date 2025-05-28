@@ -1,0 +1,178 @@
+/* === 🌅 Background Styling === */
+body {
+   
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* === 🧾 Container === */
+  .edit-profile-container {
+    max-width: 520px;
+    margin: 80px auto;
+    padding: 40px 30px;
+    background-color: #fffdfc;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    animation: fadeSlideUp 0.6s ease-out;
+  }
+  
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .edit-profile-container h2 {
+    font-size: 30px;
+    color: #ff5f00;
+    margin-bottom: 30px;
+    font-weight: 700;
+  }
+  
+  /* === ✍️ Form === */
+  .edit-profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: left;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+  }
+  
+  .form-group input {
+    padding: 12px 14px;
+    font-size: 15px;
+    border-radius: 10px;
+    border: 1.8px solid #ccc;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: #fff;
+  }
+  
+  .form-group input:focus {
+    outline: none;
+    border-color: #ff5f00;
+    box-shadow: 0 0 0 3px rgba(255, 95, 0, 0.1);
+    background-color: #fffaf7;
+  }
+  
+  /* === 🔧 Inline Controls === */
+  .form-inline-button-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+  }
+  
+  .form-inline-button-row button {
+    background: none;
+    border: none;
+    color: #ff5f00;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  
+  .form-inline-button-row button:hover {
+    color: #e45200;
+    text-decoration: underline;
+  }
+  
+  /* === ✅ Buttons === */
+  .save-button {
+    background-color: #ff5f00;
+    color: white;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 95, 0, 0.2);
+  }
+  
+  .save-button:hover {
+    background-color: #e45200;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(228, 82, 0, 0.25);
+  }
+  
+  .back-button {
+    margin-top: 20px;
+    background: none;
+    color: #ff5f00;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+  
+  .back-button:hover {
+    text-decoration: underline;
+    transform: translateX(-2px);
+  }
+  
+  /* === 🔔 Messages === */
+  .success-message,
+  .error-message {
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .success-message {
+    color: green;
+    background-color: #e8ffe8;
+    border: 1px solid #b2f5b2;
+  }
+  
+  .error-message {
+    color: red;
+    background-color: #ffe8e8;
+    border: 1px solid #f5b2b2;
+  }
+  
+  /* === 📱 Mobile === */
+  @media (max-width: 600px) {
+    .edit-profile-container {
+      padding: 28px 20px;
+    }
+  
+    .edit-profile-container h2 {
+      font-size: 24px;
+    }
+  
+    .form-inline-button-row {
+      flex-direction: column;
+      gap: 10px;
+    }
+  
+    .save-button {
+      font-size: 15px;
+      padding: 12px;
+    }
+  }
+  

@@ -137,7 +137,8 @@ const GameScreen = () => {
       const coords = scaleCoords(pos);
       return modalType === 'cart'
         ? saveGuessToCart(id, coords, raffle.editedGamePicture)
-        : saveGuessToFirestore(id, coords);
+        : saveGuessToFirestore(id, coords, raffle.editedGamePicture);
+
     });
 
     await Promise.all(promises);

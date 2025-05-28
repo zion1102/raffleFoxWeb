@@ -25,7 +25,7 @@ export const saveGuessToCart = async (raffleId, { x, y }, editedGamePicture, img
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
-  await addDoc(collection(db, 'cart_guesses'), {
+  await addDoc(collection(db, 'cart'), {
     raffleId,
     userId: user.uid,
     xCoord: parseFloat(x.toFixed(2)),
@@ -39,7 +39,7 @@ export const saveGuessToCart = async (raffleId, { x, y }, editedGamePicture, img
 
 
 // Save guess directly to confirmed tickets AND deduct credits
-export const saveGuessToFirestore = async (raffleId, { x, y }) => {
+export const saveGuessToFirestore = async (raffleId, { x, y }, editedGamePicture, imgWidth = 352, imgHeight = 492) => {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
@@ -55,28 +55,31 @@ export const saveGuessToFirestore = async (raffleId, { x, y }) => {
   if (!raffleSnap.exists()) throw new Error('Raffle not found');
 
   const userData = userSnap.data();
-  const costPer = raffleSnap.data().costPer || 0;
+  const raffleData = raffleSnap.data();
+  const costPer = raffleData.costPer || 0;
 
   if (userData.credits < costPer) {
     throw new Error('Insufficient credits');
   }
 
-  // ✅ Correct credit deduction using updateDoc
   await updateDoc(userRef, {
     credits: userData.credits - costPer
   });
 
-  // ✅ Save raffle ticket to 'raffle_tickets'
   await addDoc(collection(db, 'raffle_tickets'), {
     raffleId,
     userId: user.uid,
     xCoord: parseFloat(x.toFixed(2)),
     yCoord: parseFloat(y.toFixed(2)),
     createdAt: serverTimestamp(),
-    raffleTitle: raffleSnap.data().title || 'Untitled Raffle',
-    raffleExpiryDate: raffleSnap.data().expiryDate || null
+    raffleTitle: raffleData.title || 'Untitled Raffle',
+    raffleExpiryDate: raffleData.expiryDate || null,
+    imageUrl: editedGamePicture,
+    imgWidth,
+    imgHeight
   });
 };
+
 
 // Fetch 4 valid, non-expired raffles to show as ads (excluding the current one)
 export const getSuggestedRaffles = async (excludeId) => {

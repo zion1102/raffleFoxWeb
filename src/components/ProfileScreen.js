@@ -7,7 +7,6 @@ import '../styles/ProfileScreen.css';
 const ProfileScreen = () => {
   const [user, setUser] = useState(null);
   const [groupedTickets, setGroupedTickets] = useState({});
-  const [expandedRaffles, setExpandedRaffles] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,13 +36,19 @@ const ProfileScreen = () => {
       const grouped = {};
       for (const ticket of ticketData) {
         const raffle = raffleMap[ticket.raffleId] || {};
-        const enriched = {
-          ...ticket,
-          raffleTitle: raffle.title || 'Untitled Raffle',
-          raffleExpiryDate: raffle.expiryDate
-        };
-        if (!grouped[ticket.raffleId]) grouped[ticket.raffleId] = [];
-        grouped[ticket.raffleId].push(enriched);
+        const id = ticket.raffleId;
+
+        if (!grouped[id]) {
+          const relatedTickets = ticketData.filter(t => t.raffleId === id);
+          grouped[id] = {
+            raffleId: id,
+            title: raffle.title || 'Untitled Raffle',
+            expiryDate: raffle.expiryDate,
+            guesses: relatedTickets.length,
+            totalPrice: (raffle.costPer || 0) * relatedTickets.length
+          };
+          
+        }
       }
 
       setGroupedTickets(grouped);
@@ -52,13 +57,6 @@ const ProfileScreen = () => {
 
     fetchData();
   }, []);
-
-  const toggleExpand = (raffleId) => {
-    setExpandedRaffles(prev => ({
-      ...prev,
-      [raffleId]: !prev[raffleId]
-    }));
-  };
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -94,7 +92,6 @@ const ProfileScreen = () => {
           <div className="profile-card">
             <div className="profile-item"><strong>Phone:</strong> {user?.phone || 'N/A'}</div>
             <div className="profile-item"><strong>Gold Coins:</strong> {user?.credits || 0}</div>
-            <div className="profile-item"><strong>User Type:</strong> {user?.userType || 'N/A'}</div>
             <div className="profile-item"><strong>Age:</strong> {user?.age || 'N/A'}</div>
             <div className="profile-item">
               <strong>Account Created At:</strong>{' '}
@@ -104,35 +101,63 @@ const ProfileScreen = () => {
             </div>
           </div>
         </div>
-
         <div className="profile-tickets">
-          <h3>🎟 Your Raffle Entries</h3>
-          {Object.keys(groupedTickets).length === 0 ? (
-            <p>You haven’t entered any raffles yet.</p>
-          ) : (
-            Object.entries(groupedTickets).map(([raffleId, tickets]) => (
-              <div key={raffleId} className="ticket-group">
-                <div className="group-header" onClick={() => toggleExpand(raffleId)}>
-                  <h4>{tickets[0].raffleTitle}</h4>
-                  <span>{expandedRaffles[raffleId] ? '▼' : '▶'}</span>
-                </div>
-                {expandedRaffles[raffleId] && (
-                  <div className="group-entries">
-                    {tickets.map(ticket => (
-                      <div key={ticket.id} className="ticket-card">
-                        <p><strong>📍 Guess:</strong> ({ticket.xCoord.toFixed(1)}, {ticket.yCoord.toFixed(1)})</p>
-                        <p><strong>🗓 Entered:</strong> {new Date(ticket.createdAt.seconds * 1000).toLocaleString()}</p>
-                        <p><strong>⏰ Expires:</strong> {ticket.raffleExpiryDate?.seconds
-                          ? new Date(ticket.raffleExpiryDate.seconds * 1000).toLocaleDateString()
-                          : 'Unknown'}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+  <h3>🎟 Your Raffle Entries</h3>
+  {Object.keys(groupedTickets).length === 0 ? (
+    <p>You haven’t entered any raffles yet.</p>
+  ) : (
+    Object.entries(groupedTickets).map(([raffleId, ticket]) => (
+      <div key={raffleId} className="raffle-ticket-svg-wrapper">
+        <svg className="raffle-ticket-svg" viewBox="0 0 700 300" preserveAspectRatio="none">
+          <path
+            fill="white"
+            stroke="#ff5f00"
+            strokeWidth="2"
+            d="
+              M20,1 
+              h660 
+              a19,19 0 0 1 19,19 
+              v100 
+              a30,30 0 0 0 0,60 
+              v100 
+              a19,19 0 0 1 -19,19 
+              h-660 
+              a19,19 0 0 1 -19,-19 
+              v-100 
+              a30,30 0 0 0 0,-60 
+              v-100 
+              a19,19 0 0 1 19,-19 
+              z"
+          />
+        </svg>
+
+        <div className="raffle-ticket-content-inside">
+          <div className="raffle-ticket-id">#{raffleId}</div>
+          <div className="raffle-ticket-date">
+            Valid Until {new Date(ticket.expiryDate.seconds * 1000).toISOString().split('T')[0]}
+          </div>
+          <div className="raffle-ticket-title">{ticket.title}</div>
+          <div className="raffle-ticket-divider" />
+          <div className="raffle-ticket-info">
+            <div>
+              <div>{ticket.guesses} {ticket.guesses === 1 ? 'Ticket' : 'Tickets'}</div>
+              <div>Total: ${ticket.totalPrice.toFixed(2)}</div>
+            </div>
+            <button
+  className="raffle-ticket-button"
+  onClick={() => window.location.href = `/raffle/${raffleId}/guesses`}
+>
+  View
+</button>
+
+          </div>
         </div>
+      </div>
+    ))
+  )}
+</div>
+
+
       </div>
     </div>
   );
