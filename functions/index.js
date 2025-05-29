@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const stripeLib = require('stripe');
 require('dotenv').config(); // Local environment support
-const cors = require('cors'); 
+const cors = require('cors');
 
 // --- Initialize Firebase Admin SDK ---
 if (!admin.apps.length) {
@@ -21,18 +21,22 @@ const stripe = stripeLib(STRIPE_SECRET_KEY);
 
 // --- Setup Express app ---
 const app = express();
-app.use(cors({ origin: true }));
+const corsOptions = { origin: true };
+
+// Apply CORS to all routes
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Allow preflight for all routes
 
 // --- Raw body ONLY for Stripe Webhook ---
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/stripeWebhook') {
-    next(); // Skip bodyParser
+    next(); // Skip bodyParser for Stripe raw body
   } else {
-    bodyParser.json()(req, res, next); // Parse JSON normally
+    bodyParser.json()(req, res, next); // Use JSON parser for other routes
   }
 });
 
-// --- Apple Sign-In Private Key Info (Optional if you use Apple Sign-In) ---
+// --- Apple Sign-In Config ---
 const TEAM_ID = 'Y5N3U7CU4N';
 const KEY_ID = '3VG9HSG4ZZ';
 const CLIENT_ID = 'com.example.raffle-Fox.service';
@@ -56,10 +60,9 @@ function generateClientSecret() {
   });
 }
 
-// --- Routes ---
-
-// 🍎 Exchange Apple Token (Optional)
-app.post('/exchangeAppleToken', async (req, res) => {
+// 🍎 Exchange Apple Token (Fixed CORS)
+app.options('/exchangeAppleToken', cors(corsOptions)); // Preflight
+app.post('/exchangeAppleToken', cors(corsOptions), async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Authorization code is required' });
 
@@ -82,8 +85,9 @@ app.post('/exchangeAppleToken', async (req, res) => {
   }
 });
 
-// 💳 Create Stripe Checkout Session for Custom Amounts
-app.post('/createCheckoutSession', async (req, res) => {
+// 💳 Create Stripe Checkout Session
+app.options('/createCheckoutSession', cors(corsOptions));
+app.post('/createCheckoutSession', cors(corsOptions), async (req, res) => {
   const { amount, userId } = req.body;
   if (!amount || !userId) return res.status(400).json({ error: 'Amount and userId are required' });
 
@@ -112,7 +116,7 @@ app.post('/createCheckoutSession', async (req, res) => {
   }
 });
 
-// 🚀 Stripe Webhook to confirm payment success
+// 🚀 Stripe Webhook to confirm payment
 app.post('/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -160,5 +164,5 @@ app.post('/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (
   res.status(200).send('Unhandled event type');
 });
 
-// --- Export Express App as a Firebase HTTPS Function ---
+// --- Export the app as Firebase Function ---
 exports.api = functions.https.onRequest(app);
