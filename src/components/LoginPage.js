@@ -49,7 +49,7 @@ const LoginPage = () => {
       const response = await window.AppleID.auth.signIn();
       const { code } = response.authorization;
       const tokenResponse = await axios.post(
-        'https://us-central1-rafflefox-23872.cloudfunctions.net/exchangeAppleToken',
+        'https://us-central1-rafflefox-23872.cloudfunctions.net/api/exchangeAppleToken',
         { code },
         { headers: { 'Content-Type': 'application/json' } }
       );
