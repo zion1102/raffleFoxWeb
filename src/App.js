@@ -24,11 +24,12 @@ import GuessDetailsPage from './components/GuessDetailsPage';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [ageVerified, setAgeVerified] = useState(
-    sessionStorage.getItem('ageVerified') === 'true'
-  );
+  const [ageVerified, setAgeVerified] = useState(false);
 
   useEffect(() => {
+    const isVerified = sessionStorage.getItem('ageVerified') === 'true';
+    setAgeVerified(isVerified);
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -52,58 +53,17 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        
-        <Route
-  path="/topup-success"
-  element={
-    <ProtectedRoute user={user}>
-      <TopUpSuccess />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/raffle/:id"
-  element={
-    <ProtectedRoute user={user}>
-      <RaffleDetail />
-    </ProtectedRoute>
-  }
-/>
 
-        
-        {/* PROTECTED ROUTES */}
-        <Route
-          path="/profile"
-          element={<ProtectedRoute user={user}><ProfileScreen /></ProtectedRoute>}
-        />
-        <Route
-  path="/edit-profile"
-  element={<ProtectedRoute user={user}><EditProfilePage /></ProtectedRoute>}
-/>
-<Route
-  path="/raffle/:raffleId/guesses"
-  element={<ProtectedRoute user={user}><GuessDetailsPage /></ProtectedRoute>}
-/>
-        <Route
-          path="/update-account"
-          element={<ProtectedRoute user={user}><EmailPasswordUpdate /></ProtectedRoute>}
-        />
-        <Route
-          path="/topup"
-          element={<ProtectedRoute user={user}><TopUpCreditsPage /></ProtectedRoute>}
-        />
-        <Route
-          path="/home"
-          element={<ProtectedRoute user={user}><HomeScreen /></ProtectedRoute>}
-        />
-        <Route
-          path="/game/:id"
-          element={<ProtectedRoute user={user}><GameScreen /></ProtectedRoute>}
-        />
-        <Route
-          path="/cart"
-          element={<ProtectedRoute user={user}><CartScreen /></ProtectedRoute>}
-        />
+        <Route path="/topup-success" element={<ProtectedRoute user={user}><TopUpSuccess /></ProtectedRoute>} />
+        <Route path="/raffle/:id" element={<ProtectedRoute user={user}><RaffleDetail /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute user={user}><ProfileScreen /></ProtectedRoute>} />
+        <Route path="/edit-profile" element={<ProtectedRoute user={user}><EditProfilePage /></ProtectedRoute>} />
+        <Route path="/raffle/:raffleId/guesses" element={<ProtectedRoute user={user}><GuessDetailsPage /></ProtectedRoute>} />
+        <Route path="/update-account" element={<ProtectedRoute user={user}><EmailPasswordUpdate /></ProtectedRoute>} />
+        <Route path="/topup" element={<ProtectedRoute user={user}><TopUpCreditsPage /></ProtectedRoute>} />
+        <Route path="/home" element={<ProtectedRoute user={user}><HomeScreen /></ProtectedRoute>} />
+        <Route path="/game/:id" element={<ProtectedRoute user={user}><GameScreen /></ProtectedRoute>} />
+        <Route path="/cart" element={<ProtectedRoute user={user}><CartScreen /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

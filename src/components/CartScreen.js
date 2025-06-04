@@ -38,7 +38,6 @@ const CartScreen = () => {
           ...data,
           raffleId,
           raffleTitle: raffleCache[raffleId]?.title || 'Untitled Raffle',
-          rafflePicture: raffleCache[raffleId]?.editedGamePicture || null,
           raffleExpiry: raffleCache[raffleId]?.expiryDate?.toDate?.(),
           costPer: raffleCache[raffleId]?.costPer || 0
         });
@@ -47,7 +46,6 @@ const CartScreen = () => {
       const grouped = guesses.reduce((acc, item) => {
         acc[item.raffleId] = acc[item.raffleId] || {
           raffleTitle: item.raffleTitle,
-          rafflePicture: item.rafflePicture,
           raffleExpiry: item.raffleExpiry,
           guesses: []
         };
@@ -64,21 +62,6 @@ const CartScreen = () => {
 
     fetchCart();
   }, []);
-
-  const handleDelete = async (id) => {
-    await deleteDoc(doc(db, 'cart_guesses', id));
-    setCartItems((prev) => {
-      const updated = { ...prev };
-      for (const raffleId in updated) {
-        updated[raffleId].guesses = updated[raffleId].guesses.filter(item => item.id !== id);
-        if (updated[raffleId].guesses.length === 0) delete updated[raffleId];
-      }
-      return updated;
-    });
-    const newTotal = Object.values(cartItems).flatMap(group => group.guesses).filter(item => item.id !== id)
-      .reduce((sum, item) => sum + item.costPer, 0);
-    setTotalCost(newTotal);
-  };
 
   const handleConfirmCheckout = async () => {
     const user = auth.currentUser;
@@ -148,50 +131,60 @@ const CartScreen = () => {
           <p className="empty-cart">You have no guesses saved in your cart.</p>
         ) : (
           <>
-            {Object.entries(cartItems).map(([raffleId, { raffleTitle, rafflePicture, raffleExpiry, guesses }]) => (
-              <div key={raffleId} className="entry raffle" id="raffle-red">
-                <div className="ticket-wrapper">
-                  <div className="ticket-header">
-                    <div className="ticket-title">{raffleTitle}</div>
-                    <div className="ticket-subtitle">
-                      {guesses.length} {guesses.length > 1 ? 'guesses' : 'guess'} • Total: {guesses.reduce((sum, g) => sum + g.costPer, 0)} gold coins
-                    </div>
-                    {raffleExpiry && (
-                      <div className="ticket-expiry">
-                        {raffleExpiry < new Date() ? 'Expired' : `Valid Until ${raffleExpiry.toLocaleDateString()}`}
-                      </div>
-                    )}
+            {Object.entries(cartItems).map(([raffleId, { raffleTitle, raffleExpiry, guesses }]) => (
+              <div key={raffleId} className="raffle-ticket-wrapper">
+                <svg className="raffle-ticket-svg" viewBox="0 0 700 300" preserveAspectRatio="none">
+                  <path
+                    fill="white"
+                    stroke="#ff5f00"
+                    strokeWidth="2"
+                    d="
+                      M20,1 
+                      h660 
+                      a19,19 0 0 1 19,19 
+                      v100 
+                      a30,30 0 0 0 0,60 
+                      v100 
+                      a19,19 0 0 1 -19,19 
+                      h-660 
+                      a19,19 0 0 1 -19,-19 
+                      v-100 
+                      a30,30 0 0 0 0,-60 
+                      v-100 
+                      a19,19 0 0 1 19,-19 
+                      z"
+                  />
+                </svg>
+
+                <div className="raffle-ticket-content-inside">
+                  <div className="raffle-ticket-id">#{raffleId}</div>
+                  <div className="raffle-ticket-date">
+                    {raffleExpiry ? `Valid Until ${raffleExpiry.toISOString().split('T')[0]}` : ''}
                   </div>
-                  <div className="ticket-dashed" />
-                  {guesses.map(item => (
-                    <div key={item.id} className="guess-entry">
-                      {rafflePicture && (
-                        <div className="guess-image-wrapper">
-                          <img src={rafflePicture} alt="Guess preview" />
-                          <div
-                            className="guess-dot"
-                            style={{
-                              left: `${(item.xCoord / 352) * 100}%`,
-                              top: `${(item.yCoord / 492) * 100}%`
-                            }}
-                          />
-                        </div>
-                      )}
-                      <div className="guess-details">
-                        <div><strong>X:</strong> {item.xCoord}</div>
-                        <div><strong>Y:</strong> {item.yCoord}</div>
-                        <div><strong>Date:</strong> {item.createdAt?.seconds ? new Date(item.createdAt.seconds * 1000).toLocaleString() : 'Unknown'}</div>
-                        <div><strong>Cost:</strong> {item.costPer} gold coins</div>
-                      </div>
-                      <button className="delete-btn" onClick={() => handleDelete(item.id)}>Delete</button>
+                  <div className="raffle-ticket-title">{raffleTitle}</div>
+                  <div className="raffle-ticket-divider" />
+                  <div className="raffle-ticket-info">
+                    <div>
+                      <div>{guesses.length} {guesses.length === 1 ? 'Ticket' : 'Tickets'}</div>
+                      <div>Total: {guesses.reduce((sum, g) => sum + g.costPer, 0)} gold coins</div>
                     </div>
-                  ))}
+                    <button
+  className="raffle-ticket-button"
+  onClick={() => navigate(`/raffle/${raffleId}/guesses`, { state: { source: 'cart' } })}
+>
+  View
+</button>
+
+                  </div>
                 </div>
               </div>
             ))}
-            <div className="cart-summary">
-              <p><strong>Total Cost:</strong> {totalCost} gold coins</p>
-              <button className="checkout-btn" onClick={() => setShowModal(true)}>Proceed to Checkout</button>
+
+            <div className="checkout-bar">
+              <div className="total">
+                Total Cost: <span>{totalCost} gold coins</span>
+              </div>
+              <button className="checkout-btn" onClick={() => setShowModal(true)}>Checkout</button>
             </div>
           </>
         )}
