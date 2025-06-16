@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRaffleById, saveGuessToCart, saveGuessToFirestore } from '../services/RaffleService';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../config/firebaseConfig';
 import TopNavBar from './TopNavBar';
 import '../styles/GameScreen.css';
@@ -20,6 +20,8 @@ const GameScreen = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+
   const imageRef = useRef(null);
   const isDragging = useRef(false);
 
@@ -118,39 +120,46 @@ const GameScreen = () => {
 
   const confirmAction = async () => {
     if (!raffle || !auth.currentUser) return;
-
+  
     const totalCost = confirmedSpots.length * (raffle.costPer || 0);
     const userRef = doc(db, 'users', auth.currentUser.uid);
     const userSnap = await getDoc(userRef);
-
+  
     if (!userSnap.exists()) return;
-
+  
     const userData = userSnap.data();
+  
     if (modalType === 'checkout' && userData.credits < totalCost) {
       setModalType(null);
-      alert('Insufficient gold coins. Redirecting to top-up page.');
-      navigate('/topup');
+      setShowInsufficientModal(true);
       return;
     }
-
+  
+    if (modalType === 'checkout') {
+      await updateDoc(userRef, {
+        credits: userData.credits - totalCost
+      });
+    }
+  
     const promises = confirmedSpots.map(pos => {
       const coords = scaleCoords(pos);
       return modalType === 'cart'
         ? saveGuessToCart(id, coords, raffle.editedGamePicture)
-        : saveGuessToFirestore(id, coords, raffle.editedGamePicture);
-
+        : saveGuessToFirestore(id, coords, raffle.editedGamePicture, false);
     });
-
+  
     await Promise.all(promises);
     setConfirmedSpots([]);
     setModalType(null);
     setShowSuccess(true);
-
+  
     setTimeout(() => {
       setShowSuccess(false);
       navigate(modalType === 'cart' ? '/cart' : '/profile');
     }, 2000);
   };
+  
+  
 
   const renderAd = (r, side) => (
     <div key={r.id} className={`ad-card ${side.length === 1 ? 'tall' : ''}`}>
@@ -228,26 +237,53 @@ const GameScreen = () => {
 
       {/* Modals (confirmation, delete, error, success) */}
       {modalType && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Confirm {modalType === 'cart' ? 'Save to Cart' : 'Checkout'}</h3>
-            <p>You have <strong>{confirmedSpots.length}</strong> guess{confirmedSpots.length > 1 ? 'es' : ''}.</p>
-            <p>Total Cost: <strong>{(raffle.costPer || 0) * confirmedSpots.length} gold coins</strong></p>
-            <div className="modal-buttons">
-              <button onClick={confirmAction}>Yes, Proceed</button>
-              <button onClick={() => setModalType(null)}>Cancel</button>
-            </div>
+  <div className="modal-overlay">
+    <div className="modal">
+      {modalType === 'checkout' ? (
+        <>
+          <h3>Checkout</h3>
+          <p>Are you ready - These are your confirmed position(s) - happy?</p>
+          <p>
+            You have <strong>{confirmedSpots.length}</strong> guess
+            {confirmedSpots.length > 1 ? 'es' : ''}.
+          </p>
+          <p>
+            Total Cost:{' '}
+            <strong>{(raffle.costPer || 0) * confirmedSpots.length} gold coins</strong>
+          </p>
+          <div className="modal-buttons">
+            <button onClick={confirmAction}>Yes, Checkout</button>
+            <button onClick={() => setModalType(null)}>No, Change my position(s)</button>
           </div>
-        </div>
+        </>
+      ) : (
+        <>
+          <h3>Save to Cart</h3>
+          <p>
+            You have <strong>{confirmedSpots.length}</strong> guess
+            {confirmedSpots.length > 1 ? 'es' : ''}.
+          </p>
+          <p>
+            Total Cost:{' '}
+            <strong>{(raffle.costPer || 0) * confirmedSpots.length} gold coins</strong>
+          </p>
+          <div className="modal-buttons">
+            <button onClick={confirmAction}>Yes, Proceed</button>
+            <button onClick={() => setModalType(null)}>Cancel</button>
+          </div>
+        </>
       )}
+    </div>
+  </div>
+)}
 
       {deleteIndex !== null && (
         <div className="modal-overlay">
           <div className="modal">
-            <h3>Remove Guess?</h3>
+            <h3>Delete Guess?</h3>
             <p>Are you sure you want to delete this guess?</p>
             <div className="modal-buttons">
-              <button onClick={confirmDelete}>Yes, Remove</button>
+              <button onClick={confirmDelete}>Yes, Delete</button>
               <button onClick={cancelDelete}>Cancel</button>
             </div>
           </div>
@@ -272,6 +308,19 @@ const GameScreen = () => {
           <p className="success-message">Success!</p>
         </div>
       )}
+      {showInsufficientModal && (
+  <div className="modal-overlay">
+    <div className="modal">
+      <h3>Oops! Looks like you don’t have enough credit. 😬</h3>
+      <p>You can delete your guesses or add more credit to make sure you can play</p>
+      <div className="modal-buttons">
+        <button onClick={() => navigate('/topup')}>Top Up</button>
+        <button onClick={() => setShowInsufficientModal(false)}>Remove Guesses</button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };

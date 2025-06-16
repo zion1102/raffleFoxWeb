@@ -9,8 +9,9 @@ const LandingPage = () => {
       <TopNavBar /> {/* Add the navigation bar here */}
       <div className="landing-container">
         <header className="header">
-          <h1>Welcome to Credit Top-Up</h1>
-          <p>Your easy way to add credits</p>
+          <h1>Welcome to Raffle Fox!</h1>
+          <p>Win trips, prizes, events, devices with and much more - all the things <br/>
+            that make life better, easier and fun! Always at a bargain </p>
           <div className="button-group">
             <Link to="/login" className="button">Log In</Link>
             <Link to="/register" className="button">Register</Link>

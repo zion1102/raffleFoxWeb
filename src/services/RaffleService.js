@@ -39,7 +39,14 @@ export const saveGuessToCart = async (raffleId, { x, y }, editedGamePicture, img
 
 
 // Save guess directly to confirmed tickets AND deduct credits
-export const saveGuessToFirestore = async (raffleId, { x, y }, editedGamePicture, imgWidth = 352, imgHeight = 492) => {
+export const saveGuessToFirestore = async (
+  raffleId,
+  { x, y },
+  editedGamePicture,
+  deductCredits = true,
+  imgWidth = 352,
+  imgHeight = 492
+) => {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
@@ -54,17 +61,20 @@ export const saveGuessToFirestore = async (raffleId, { x, y }, editedGamePicture
   if (!userSnap.exists()) throw new Error('User not found');
   if (!raffleSnap.exists()) throw new Error('Raffle not found');
 
-  const userData = userSnap.data();
   const raffleData = raffleSnap.data();
-  const costPer = raffleData.costPer || 0;
 
-  if (userData.credits < costPer) {
-    throw new Error('Insufficient credits');
+  if (deductCredits) {
+    const userData = userSnap.data();
+    const costPer = raffleData.costPer || 0;
+
+    if (userData.credits < costPer) {
+      throw new Error('Insufficient credits');
+    }
+
+    await updateDoc(userRef, {
+      credits: userData.credits - costPer
+    });
   }
-
-  await updateDoc(userRef, {
-    credits: userData.credits - costPer
-  });
 
   await addDoc(collection(db, 'raffle_tickets'), {
     raffleId,
@@ -79,6 +89,7 @@ export const saveGuessToFirestore = async (raffleId, { x, y }, editedGamePicture
     imgHeight
   });
 };
+
 
 
 // Fetch 4 valid, non-expired raffles to show as ads (excluding the current one)

@@ -1,0 +1,161 @@
+.raffle-detail-page {
+  background: linear-gradient(135deg, #ffffff, #f9f9f9);
+  padding-top: 80px;
+  min-height: 100vh;
+  font-family: 'Poppins', sans-serif;
+}
+
+.raffle-detail-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === Image Section === */
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  padding: 40px 40px 20px 40px;
+  box-sizing: border-box;
+  border: 2px solid #e0e0e0;  /* ✅ slightly thicker border */
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+  margin: 30px auto 0 auto;
+  max-width: 850px;
+}
+
+.raffle-detail-image {
+  width: 100%;
+  max-width: 800px;
+  max-height: 450px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+  border-radius: 18px;
+}
+
+.heart-button {
+  position: absolute;
+  top: 25px;
+  right: 40px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  z-index: 5;
+}
+
+.heart-button:hover {
+  transform: scale(1.15);
+}
+
+.heart-filled {
+  color: #f15b29;
+  font-size: 34px;
+}
+
+.heart-empty {
+  color: #ddd;
+  font-size: 34px;
+}
+
+/* === Info Section === */
+.raffle-detail-info {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.raffle-detail-info h1 {
+  font-size: 32px;
+  color: #f15b29;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.raffle-extra {
+  background: #fff4ee;
+  border-left: 4px solid #f15b29;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  color: #333;
+  border-radius: 8px;
+}
+
+.raffle-prize-tag {
+  font-size: 20px;
+  font-weight: bold;
+  color: #f15b29;
+  margin: 20px 0 8px;
+}
+
+.raffle-expiry {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 30px;
+}
+
+.cta-button {
+  background-color: #f15b29;
+  color: white;
+  padding: 16px 40px;
+  border-radius: 50px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+  margin-bottom: 25px;
+  align-self: flex-start;
+}
+
+.cta-button:hover {
+  background-color: #d9480f;
+  transform: scale(1.05);
+}
+
+.raffle-desc {
+  font-size: 16px;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+  .raffle-detail-container {
+    max-width: 100%;
+  }
+
+  .image-wrapper {
+    padding: 20px;
+    margin-top: 20px;
+    max-width: 100%;
+  }
+
+  .raffle-detail-image {
+    max-width: 100%;
+    max-height: 350px;
+  }
+
+  .raffle-detail-info {
+    padding: 25px;
+  }
+
+  .raffle-detail-info h1 {
+    font-size: 26px;
+  }
+
+  .cta-button {
+    padding: 14px 36px;
+    font-size: 15px;
+  }
+}
