@@ -6,6 +6,7 @@ import { db, auth } from '../config/firebaseConfig';
 import TopNavBar from './TopNavBar';
 import '../styles/GameScreen.css';
 import coinImg from '../assets/dollar.png';
+import { FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
 
 const GameScreen = () => {
   const { id } = useParams();
@@ -13,17 +14,18 @@ const GameScreen = () => {
   const [raffle, setRaffle] = useState(null);
   const [dotPos, setDotPos] = useState(null);
   const [confirmedSpots, setConfirmedSpots] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
   const [leftAds, setLeftAds] = useState([]);
   const [rightAds, setRightAds] = useState([]);
   const [countdowns, setCountdowns] = useState({});
   const [modalType, setModalType] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
 
   const imageRef = useRef(null);
   const isDragging = useRef(false);
+  const [mouseDown, setMouseDown] = useState(false);
 
   useEffect(() => {
     const loadRaffle = async () => {
@@ -85,8 +87,16 @@ const GameScreen = () => {
     const rect = imageRef.current.getBoundingClientRect();
     const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
     const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-    setDotPos({ x, y });
+  
+    if (editingIndex !== null) {
+      // Edit mode: update guess in real-time as you drag
+      setConfirmedSpots(prev =>
+        prev.map((spot, i) => (i === editingIndex ? { x, y } : spot))
+      );
+      setDotPos({ x, y });
+    }
   };
+  
 
   const scaleCoords = ({ x, y }) => {
     const rect = imageRef.current.getBoundingClientRect();
@@ -96,19 +106,28 @@ const GameScreen = () => {
     };
   };
 
-  const confirmPosition = () => {
-    if (dotPos) {
-      setConfirmedSpots(prev => [...prev, dotPos]);
+  const handleEdit = (index) => {
+    setEditingIndex(index);
+    setDotPos(confirmedSpots[index]);
+  };
+
+  const handleConfirmEdit = () => {
+    setEditingIndex(null);
+    setDotPos(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setDotPos(null);
+  };
+
+  const handleDeleteSpot = (index) => {
+    setConfirmedSpots(prev => prev.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
       setDotPos(null);
     }
   };
-
-  const handleDeleteSpot = (index) => setDeleteIndex(index);
-  const confirmDelete = () => {
-    setConfirmedSpots(prev => prev.filter((_, i) => i !== deleteIndex));
-    setDeleteIndex(null);
-  };
-  const cancelDelete = () => setDeleteIndex(null);
 
   const handleAction = (type) => {
     if (confirmedSpots.length === 0) {
@@ -120,46 +139,43 @@ const GameScreen = () => {
 
   const confirmAction = async () => {
     if (!raffle || !auth.currentUser) return;
-  
+
     const totalCost = confirmedSpots.length * (raffle.costPer || 0);
     const userRef = doc(db, 'users', auth.currentUser.uid);
     const userSnap = await getDoc(userRef);
-  
+
     if (!userSnap.exists()) return;
-  
     const userData = userSnap.data();
-  
+
     if (modalType === 'checkout' && userData.credits < totalCost) {
       setModalType(null);
       setShowInsufficientModal(true);
       return;
     }
-  
+
     if (modalType === 'checkout') {
       await updateDoc(userRef, {
         credits: userData.credits - totalCost
       });
     }
-  
+
     const promises = confirmedSpots.map(pos => {
       const coords = scaleCoords(pos);
       return modalType === 'cart'
         ? saveGuessToCart(id, coords, raffle.editedGamePicture)
         : saveGuessToFirestore(id, coords, raffle.editedGamePicture, false);
     });
-  
+
     await Promise.all(promises);
     setConfirmedSpots([]);
     setModalType(null);
     setShowSuccess(true);
-  
+
     setTimeout(() => {
       setShowSuccess(false);
       navigate(modalType === 'cart' ? '/cart' : '/profile');
     }, 2000);
   };
-  
-  
 
   const renderAd = (r, side) => (
     <div key={r.id} className={`ad-card ${side.length === 1 ? 'tall' : ''}`}>
@@ -184,49 +200,94 @@ const GameScreen = () => {
           <h2 className="raffle-title">{raffle.title}</h2>
 
           <div className="game-meta">
-            <div className="game-date">
-              ⏰ {new Date(raffle.expiryDate.toDate()).toLocaleString()}
-            </div>
-            <div className="game-cost">
-              <img src={coinImg} alt="coin" className="coin-icon" /> {raffle.costPer} gold coins
-            </div>
+            <div className="game-date">⏰ {new Date(raffle.expiryDate.toDate()).toLocaleString()}</div>
+            <div className="game-cost"><img src={coinImg} alt="coin" className="coin-icon" /> {raffle.costPer} gold coins</div>
           </div>
 
           <div className="instructions">
             <h4>🎯 How to Play</h4>
             <ul>
               <li>Click or drag on the image to choose your guess.</li>
-              <li>Click “Confirm Position” to lock in each guess.</li>
-              <li>You can place multiple guesses before saving or checking out.</li>
+              <li>Your guess is confirmed immediately when clicked.</li>
+              <li>You can edit or remove guesses anytime before saving.</li>
             </ul>
           </div>
 
-          <div
-            className="image-wrapper"
-            onClick={handleImageInteraction}
-            onMouseMove={(e) => isDragging.current && handleImageInteraction(e)}
-            onMouseDown={() => isDragging.current = true}
-            onMouseUp={() => isDragging.current = false}
-            onMouseLeave={() => isDragging.current = false}
-          >
-            <img ref={imageRef} src={raffle.editedGamePicture} alt="Guess Target" />
-            {dotPos && <div className="target-dot" style={{ left: dotPos.x, top: dotPos.y }} />}
-            {confirmedSpots.map((spot, i) => (
-              <div
-                key={i}
-                className="confirmed-dot"
-                style={{ left: spot.x, top: spot.y }}
-                onClick={() => handleDeleteSpot(i)}
-              />
-            ))}
+          <div className="game-and-coords">
+            <div
+              className="image-wrapper"
+              onMouseDown={() => { isDragging.current = true; setMouseDown(true); }}
+              onMouseUp={() => { isDragging.current = false; setMouseDown(false); }}
+              onMouseLeave={() => { isDragging.current = false; setMouseDown(false); }}
+              onMouseMove={(e) => {
+                if (isDragging.current && editingIndex !== null) {
+                  handleImageInteraction(e);
+                }
+              }}
+              
+              onClick={(e) => {
+                if (editingIndex === null) {
+                  // Only allow one click to add guess when not editing
+                  const rect = imageRef.current.getBoundingClientRect();
+                  const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+                  const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+                  setConfirmedSpots(prev => [...prev, { x, y }]);
+                }
+              }}
+              
+            >
+              <img ref={imageRef} src={raffle.editedGamePicture} alt="Guess Target" />
+              {dotPos && <div className="target-dot" style={{ left: dotPos.x, top: dotPos.y }} />}
+              {confirmedSpots.map((spot, i) => (
+  <div
+    key={i}
+    className={`confirmed-dot ${editingIndex === i ? 'editing-dot' : ''}`}
+    style={{ left: spot.x, top: spot.y }}
+  >
+    <span className="dot-number">{i + 1}</span>
+  </div>
+))}
+
+            </div>
+
+            <div className="coord-list">
+              <h4>Your Guesses</h4>
+              {confirmedSpots.map((spot, i) => (
+                <div key={i} className={`coord-item${editingIndex === i ? ' editing' : ''}`}>
+                <div className="coord-info">
+                  <span className="coord-emoji">📍</span>
+                  <span className="coord-number-badge">{i + 1}</span>
+                  <div className="coord-xy-group">
+  <div className="coord-row">
+    <span className="coord-label">X:</span>
+    <span className="coord-value">{spot.x.toFixed(1)}</span>
+    <span className="coord-label">Y:</span>
+    <span className="coord-value">{spot.y.toFixed(1)}</span>
+  </div>
+</div>
+
+                </div>
+              
+                <div className="coord-actions">
+                  {editingIndex === i ? (
+                    <>
+                      <FiCheck onClick={handleConfirmEdit} title="Confirm" />
+                      <FiX onClick={handleCancelEdit} title="Cancel" />
+                    </>
+                  ) : (
+                    <>
+                      <FiEdit2 onClick={() => handleEdit(i)} title="Edit" />
+                      <FiTrash2 onClick={() => handleDeleteSpot(i)} title="Delete" />
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              ))}
+            </div>
           </div>
 
-          {dotPos && (
-            <p className="live-coords">📍 X: {dotPos.x.toFixed(1)}, Y: {dotPos.y.toFixed(1)}</p>
-          )}
-
           <div className="controls">
-            <button onClick={confirmPosition}>Confirm Position</button>
             <button onClick={() => handleAction('cart')}>Save to Cart</button>
             <button onClick={() => handleAction('checkout')}>Checkout</button>
           </div>
@@ -277,18 +338,7 @@ const GameScreen = () => {
   </div>
 )}
 
-      {deleteIndex !== null && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Delete Guess?</h3>
-            <p>Are you sure you want to delete this guess?</p>
-            <div className="modal-buttons">
-              <button onClick={confirmDelete}>Yes, Delete</button>
-              <button onClick={cancelDelete}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+     
 
       {showErrorModal && (
         <div className="modal-overlay">

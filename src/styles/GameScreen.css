@@ -223,6 +223,177 @@ body {
   background: #d9480f;
 }
 
+
+/* === NEW: Game and Coordinates Wrapper === */
+.game-and-coords {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.coord-list {
+  width: 100%;
+  max-width: 480px;
+  background: #fffdfb;
+  border: 1px solid #f15b29;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  font-family: 'Inter', sans-serif;
+}
+
+.coord-list h4 {
+  font-size: 15px;
+  color: #f15b29;
+  font-weight: 600;
+  margin-bottom: 14px;
+  text-align: left;
+  letter-spacing: 0.2px;
+}
+
+.coord-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #f6eae4;
+  transition: background 0.2s ease;
+}
+
+.coord-item:last-child {
+  border-bottom: none;
+}
+
+.coord-item.editing {
+  background: #fff6f2;
+  border-radius: 6px;
+}
+
+.coord-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+  max-width: 160px;
+}
+
+.coord-emoji {
+  font-size: 16px;
+}
+
+.coord-number-badge {
+  background: #f15b29;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.coord-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-grow: 1;
+  max-width: 160px;
+}
+
+.coord-emoji {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.coord-number-badge {
+  background: #f15b29;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.coord-xy-group {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+
+.coord-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.4px;
+  color: #333;
+  line-height: 1.3;
+  min-width: 160px;
+  white-space: nowrap;
+}
+
+
+.coord-label {
+  width: auto;
+  min-width: 16px;
+  font-weight: 600;
+  color: #f15b29;
+}
+
+
+.coord-value {
+  font-weight: 500;
+  color: #333;
+  min-width: 45px;
+  display: inline-block;
+}
+
+
+
+.coord-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.coord-actions svg {
+  cursor: pointer;
+  color: #f15b29;
+  transition: color 0.2s ease;
+  width: 16px;
+  height: 16px;
+}
+
+.coord-actions svg:hover {
+  color: #d9480f;
+}
+
+
+/* === Responsive Layout Update === */
+@media (max-width: 960px) {
+  .game-and-coords {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .coord-list {
+    width: 100%;
+    max-width: 320px;
+    margin-top: 20px;
+  }
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -331,4 +502,33 @@ body {
     width: 100%;
     max-width: 260px;
   }
+}
+.confirmed-dot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: #f15b29;
+  border: 2px solid #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.confirmed-dot .dot-number {
+  pointer-events: none;
+}
+.editing-dot {
+  background-color: #fff;
+  border: 2px solid #f15b29;
+  color: #f15b29;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 0 0 4px rgba(241, 91, 41, 0.2);
+  z-index: 2;
 }
