@@ -20,6 +20,7 @@ import AgeVerificationModal from './components/AgeVerificationModal';
 import ProtectedRoute from './components/ProtectedRoute';
 import EditProfilePage from './components/EditProfilePage';
 import GuessDetailsPage from './components/GuessDetailsPage';
+import ChatWidget from './components/ChatWidget';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -48,23 +49,28 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={user ? <HomeScreen /> : <LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
+      <>
+        <Routes>
+          <Route path="/" element={user ? <HomeScreen /> : <LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
-        <Route path="/topup-success" element={<ProtectedRoute user={user}><TopUpSuccess /></ProtectedRoute>} />
-        <Route path="/raffle/:id" element={<ProtectedRoute user={user}><RaffleDetail /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute user={user}><ProfileScreen /></ProtectedRoute>} />
-        <Route path="/edit-profile" element={<ProtectedRoute user={user}><EditProfilePage /></ProtectedRoute>} />
-        <Route path="/raffle/:raffleId/guesses" element={<ProtectedRoute user={user}><GuessDetailsPage /></ProtectedRoute>} />
-        <Route path="/update-account" element={<ProtectedRoute user={user}><EmailPasswordUpdate /></ProtectedRoute>} />
-        <Route path="/topup" element={<ProtectedRoute user={user}><TopUpCreditsPage /></ProtectedRoute>} />
-        <Route path="/home" element={<ProtectedRoute user={user}><HomeScreen /></ProtectedRoute>} />
-        <Route path="/game/:id" element={<ProtectedRoute user={user}><GameScreen /></ProtectedRoute>} />
-        <Route path="/cart" element={<ProtectedRoute user={user}><CartScreen /></ProtectedRoute>} />
-      </Routes>
+          <Route path="/topup-success" element={<ProtectedRoute user={user}><TopUpSuccess /></ProtectedRoute>} />
+          <Route path="/raffle/:id" element={<ProtectedRoute user={user}><RaffleDetail /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute user={user}><ProfileScreen /></ProtectedRoute>} />
+          <Route path="/edit-profile" element={<ProtectedRoute user={user}><EditProfilePage /></ProtectedRoute>} />
+          <Route path="/raffle/:raffleId/guesses" element={<ProtectedRoute user={user}><GuessDetailsPage /></ProtectedRoute>} />
+          <Route path="/update-account" element={<ProtectedRoute user={user}><EmailPasswordUpdate /></ProtectedRoute>} />
+          <Route path="/topup" element={<ProtectedRoute user={user}><TopUpCreditsPage /></ProtectedRoute>} />
+          <Route path="/home" element={<ProtectedRoute user={user}><HomeScreen /></ProtectedRoute>} />
+          <Route path="/game/:id" element={<ProtectedRoute user={user}><GameScreen /></ProtectedRoute>} />
+          <Route path="/cart" element={<ProtectedRoute user={user}><CartScreen /></ProtectedRoute>} />
+        </Routes>
+
+        {/* Persistent Chat Widget on All Pages */}
+        <ChatWidget />
+      </>
     </Router>
   );
 }

@@ -164,5 +164,78 @@ app.post('/stripeWebhook', bodyParser.raw({ type: 'application/json' }), async (
   res.status(200).send('Unhandled event type');
 });
 
+
+// 🤖 Chatbot Route
+// 🤖 Chatbot Route (Smart + Logging)
+app.options('/chatbot', cors(corsOptions));
+app.post('/chatbot', cors(corsOptions), async (req, res) => {
+  const { message, context } = req.body;
+
+  if (!message) return res.status(400).json({ error: 'Message is required.' });
+
+  const systemPrompt = `
+You are RaffleBot, a helpful AI assistant built into the Raffle Fox app.
+
+📌 Features you can help with:
+- Viewing raffles and how to join them
+- How to submit guesses
+- Coin system (1 guess = coins, coins are bought with real money)
+- Top-Up system (TTD payments via Stripe)
+- Liked raffles
+- Viewing past guesses or results
+- What happens when a user wins
+- Differences for guest vs logged-in users
+
+🔥 Rules:
+- A raffle has a game image where users guess a missing spot.
+- The closest guess (within 10px) to the hidden item wins.
+- Users can top up coins, view their profile, and edit account info.
+- Guests can browse but must log in to play.
+
+Current user status:
+- Logged In: ${context?.isLoggedIn ? "Yes" : "No"}
+- UID: ${context?.uid || "N/A"}
+- Coins: ${context?.coinBalance ?? "Unknown"}
+
+Answer naturally, helpfully, and in a way that’s easy for all users to understand.
+`;
+
+  try {
+    const openaiRes = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const reply = openaiRes.data.choices[0].message.content;
+
+    // Optionally store chat logs
+    await db.collection('chatLogs').add({
+      uid: context?.uid || 'guest',
+      message,
+      reply,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    res.status(200).json(reply);
+  } catch (error) {
+    console.error('❌ OpenAI error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Error generating response.' });
+  }
+});
+
+
+
 // --- Export the app as Firebase Function ---
 exports.api = functions.https.onRequest(app);
